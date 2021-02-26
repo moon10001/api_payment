@@ -70,7 +70,7 @@ class ImportController extends BaseController
 
             if ($datediff > 0) {
               $data['nominal'] = floatval($data['nominal']) / ($datediff+1);
-              for ($i = 0; $i < $datediff; $i++) {
+              for ($i = 0; $i <= $datediff; $i++) {
                 if ($i > 0) {
                   $currentTimestamp = strtotime('next month', $currentTimestamp);
                   $periode = date('my', $currentTimestamp);
