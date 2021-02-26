@@ -33,6 +33,16 @@ class UpdateTrInvoicesTableJob extends Job
           ->where('id', $record['temps_id'])
           ->first();
 
+          $invoice = DB::table('tr_invoices')
+          ->select('nominal', 'payments_date')
+          ->where('id', $record['id'])
+          ->where('periode', $record['periode'])
+          ->where('temps_id', $record['temps_id'])
+          ->where('academics_year', $record['academics_year'])
+          ->first();
+
+          $invoiceNominal = $invoice ? $invoice->nominal : 0;
+
           DB::table('tr_invoices_mt940')
           ->insert([
             'organizations_id' => 3,
@@ -43,27 +53,31 @@ class UpdateTrInvoicesTableJob extends Job
             'academics_year' => $record['academics_year'],
             'payments_date' => $record['payments_date'],
             'collectible_name' => $siswa ? $siswa->name : '',
-            'nominal' => $record['nominal']
+            'nominal' => $record['nominal'],
+            'diff' => $record['nominal'] != $invoiceNominal,
           ]);
-          $affected = DB::table('tr_invoices')
-          ->where('id', $record['id'])
-          ->where('periode', $record['periode'])
-          ->where('temps_id', $record['temps_id'])
-          ->where('academics_year', $record['academics_year'])
-          ->whereNull('payments_date')
-          ->update([
-            'payments_date' => $record['payments_date']
-          ]);
-          if ($affected > 0) {
-            DB::table('tr_invoice_details')
-            ->insert([
-              'invoices_id' => $record['id'],
-              'receipts_id' => $record['id'],
-              'nominal' => $record['nominal'],
-              'payments_date' => $record['payments_date'],
-              'payments_type' => 'H2H',
-              'nobukti' => $record['id'],
+
+          if ($invoice && $invoice->payments_date == null) {
+            $affected = DB::table('tr_invoices')
+            ->select('nominal', 'payments_date')
+            ->where('id', $record['id'])
+            ->where('periode', $record['periode'])
+            ->where('temps_id', $record['temps_id'])
+            ->where('academics_year', $record['academics_year'])
+            ->update([
+              'payments_date' => $record['payments_date']
             ]);
+            if ($affected > 0) {
+              DB::table('tr_invoice_details')
+              ->insert([
+                'invoices_id' => $record['id'],
+                'receipts_id' => $record['id'],
+                'nominal' => $record['nominal'],
+                'payments_date' => $record['payments_date'],
+                'payments_type' => 'H2H',
+                'nobukti' => $record['id'],
+              ]);
+            }
           }
           DB::commit();
         } catch (Exception $e) {
