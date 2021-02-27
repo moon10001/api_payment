@@ -16,39 +16,10 @@ class ImportController extends BaseController
         $this->output = $consoleOutput;
     }
 
-    private function updateDatabase($records) {
-      var_dump($records);
-      foreach($records as $record) {
-        $affected = DB::table('tr_invoices')
-        ->where('id', $record['id'])
-        ->where('periode', $record['periode'])
-        ->where('temps_id', $record['temps_id'])
-        ->where('academics_year', $record['academics_year'])
-        ->whereNull('payments_date')
-        ->update([
-          'payments_date' => $record['payments_date']
-        ]);
-        if ($affected > 0) {
-          DB::table('tr_invoice_details')
-          ->insert([
-            'invoices_id' => $record['id'],
-            'receipts_id' => $record['id'],
-            'nominal' => $record['nominal'],
-            'payments_date' => $record['payments_date'],
-            'payments_type' => 'H2H',
-          ]);
-        }
-      }
-    }
-
     public function import() {
       $records = [];
-      $count = 0;
 
       foreach(Storage::disk('mt940')->files('/') as $filename) {
-        // if ($count === 1) continue;
-        // else $count++;
-        // $this->output->writeln($filename);
         $file = Storage::disk('mt940')->get($filename);
         $data = [];
         foreach(explode(PHP_EOL, $file) as $line) {
