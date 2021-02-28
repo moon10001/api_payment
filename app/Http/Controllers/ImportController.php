@@ -60,6 +60,7 @@ class ImportController extends BaseController
         'temps_id' => $data['temps_id'],
         'periode_from' => $data['periode_from'],
         'periode_to' => $data['periode_to'],
+        'payment_date' => $data['payments_date'],
         'nominal' => $data['nominal'],
         'mismatch' => $data['mismatch'],
         'diff' => $data['diff'],
