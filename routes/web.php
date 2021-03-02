@@ -19,3 +19,5 @@ $router->get('/', function () use ($router) {
 
 
 $router->get('/import', 'ImportController@import');
+$router->post('/report', 'ReportController@get');
+$router->post('/options/{type}', 'OptionsController@get');
