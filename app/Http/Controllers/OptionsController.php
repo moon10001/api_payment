@@ -24,7 +24,7 @@ class OptionsController extends Controller
           ->where('units_id', $request->unit_id)
           ->where(function($q) use ($request) {
               $q->where('id', 'LIKE', $request->value.'%')
-              ->orWhere('name', 'LIKE', $request->value.'%');
+              ->orWhere('name', 'LIKE', '%'.$request->value.'%');
           })
           ->distinct()
           ->get();
@@ -37,6 +37,6 @@ class OptionsController extends Controller
           return response()->json($options);
         default:
           return response();
-      }
     }
+  }
 }

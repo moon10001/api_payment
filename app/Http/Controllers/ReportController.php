@@ -72,4 +72,17 @@ class ReportController extends Controller
         'liabilities' => $liabilities,
       ]);
     }
+
+    public function recap(Request $request) {
+      $invoices = DB::table('tr_invoices')
+      ->select(
+        '*',
+        DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
+        DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date')
+      )
+      ->join('ms_temp_siswa', 'ms_temp_siswa.id' , '=', 'tr_invoices.temps.id')
+      ->whereIn('periode', 'LIKE', '%'.$request->periode)
+      ->get();
+      return response()->json($invoices);
+    }
 }
