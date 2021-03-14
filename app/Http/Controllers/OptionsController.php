@@ -17,11 +17,18 @@ class OptionsController extends Controller
     }
 
     public function get(Request $request, $type) {
+      $vaCodes = [];
+      if ($request->unit_id) {
+        $vaCodes = collect($request->unit_id)->map(function($item) {
+          return $item['va_code'];
+        });
+      }
       switch($type) {
         case 'va-code':
+
           $results = DB::table('ms_temp_siswa')
           ->select('*')
-          ->where('units_id', $request->unit_id)
+          ->whereIn('units_id', $vaCodes)
           ->where(function($q) use ($request) {
               $q->where('id', 'LIKE', $request->value.'%')
               ->orWhere('name', 'LIKE', '%'.$request->value.'%');
@@ -32,6 +39,23 @@ class OptionsController extends Controller
             return [
               'value' => $item->id,
               'label' => $item->id . ' - '. $item->name,
+            ];
+          });
+          return response()->json($options);
+        case 'class':
+          $results = DB::table('ms_temp_siswa')
+          ->select('class', 'paralel', 'jurusan')
+          ->whereIn('units_id', $vaCodes)
+          ->where('class', '<>', '')
+          ->distinct()
+          ->orderBy('class', 'ASC')
+          ->orderBy('paralel', 'ASC')
+          ->orderBy('jurusan', 'ASC')
+          ->get();
+          $options = $results->map(function ($item, $key) {
+            return [
+              'value' => $item->class,
+              'label' => $item->class .' '. $item->paralel .' '. $item->jurusan
             ];
           });
           return response()->json($options);
