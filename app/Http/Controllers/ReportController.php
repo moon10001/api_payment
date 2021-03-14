@@ -132,19 +132,18 @@ class ReportController extends Controller
 
         $mappedInvoices = $invoices->where('payments_date', '!=', null)->groupBy('payments_date')->mapWithKeys(function($item, $key) {
           $timestamp = strtotime($key);
-	  $month = date('m', $timestamp);
-	  $values = $item->values();
-
+	        $month = date('m', $timestamp);
+	        $values = $item->values();
           $total = $values->sum('total');
           return [
             intval($month) => $total
           ];
         });
 
-	$item->amount = $invoices->first()->total;
+	      $item->amount = $invoices->first()->nominal;
         $item->invoices = $mappedInvoices;
         $item->total_invoices = $invoices->sum('total');
-        $item->total_payments = $mappedInvoices->sum('total');
+        $item->total_payments = $mappedInvoices->sum();
       };
 
       return response()->json($students);
