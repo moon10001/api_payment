@@ -54,7 +54,7 @@ class OptionsController extends Controller
           ->get();
           $options = $results->map(function ($item, $key) {
             return [
-              'value' => $item->class,
+              'value' => $item->class .'_'. $item->paralel .'_'. $item->jurusan,
               'label' => $item->class .' '. $item->paralel .' '. $item->jurusan
             ];
           });
