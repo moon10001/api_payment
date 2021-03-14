@@ -108,12 +108,12 @@ class ReportController extends Controller
         $paralel = isset($classArray[1]) ? $classArray[1] : null;
         $jurusan = isset($classArray[2]) ? $classArray[2] : null;
       }
-      DB::enableQueryLog();
       $students = DB::table('ms_temp_siswa')
       ->whereIn('units_id', $vaCodes)
       ->where('class', $class)
       ->where('paralel', $paralel)
       ->where('jurusan', $jurusan)
+      ->orderBy('name')
       ->get();
       //return response()->json(['log' => DB::getQueryLog()]);
 
@@ -121,7 +121,7 @@ class ReportController extends Controller
         $invoices = DB::table('tr_invoices')
         ->select(
           '*',
-	  'payments_date',
+	        'payments_date',
           DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
           DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
           DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
@@ -140,12 +140,18 @@ class ReportController extends Controller
           ];
         });
 
-	      $item->amount = $invoices->first()->nominal;
+	      $item->amount = $invoices->isNotEmpty() ? $invoices->first()->nominal : 0;
         $item->invoices = $mappedInvoices;
         $item->total_invoices = $invoices->sum('total');
         $item->total_payments = $mappedInvoices->sum();
+        $item->diff = $item->total_invoices - $item->total_payments;
       };
 
-      return response()->json($students);
+      return response()->json([
+        'data' => $students,
+        'total_payments' => $students->sum('total_payments'),
+        'total_invoices' => $students->sum('total_invoices'),
+        'total_diff' => $students->sum('diff'),
+      ]);
     }
 }
