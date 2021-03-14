@@ -75,40 +75,80 @@ class ReportController extends Controller
 
     public function recap(Request $request) {
       $vaCodes = [];
+      $startYear = $request->year;
+      $endYear = intval($startYear) + 1;
+      $periode = [
+        '07'.$startYear,
+        '08'.$startYear,
+        '09'.$startYear,
+        '10'.$startYear,
+        '11'.$startYear,
+        '12'.$startYear,
+        '01'.$endYear,
+        '02'.$endYear,
+        '03'.$endYear,
+        '04'.$endYear,
+        '05'.$endYear,
+        '06'.$endYear,
+      ];
       if ($request->unit_id) {
         $vaCodes = collect($request->unit_id)->map(function($item) {
           return $item['va_code'];
         });
       }
-      $class = $request->class;
-      $year = $request->year;
+      $classArray = $request->class;
+      $class = '';
+      $paralel = null;
+      $jurusan = null;
 
+      if(isset($classArray)) {
+        $classArray = explode('_', $classArray);
+        $class = $classArray[0];
+        $paralel = isset($classArray[1]) ? $classArray[1] : null;
+        $jurusan = isset($classArray[2]) ? $classArray[2] : null;
+      }
+      DB::enableQueryLog();
       $students = DB::table('ms_temp_siswa')
       ->whereIn('units_id', $vaCodes)
       ->where('class', $class)
+      ->where('paralel', $paralel)
+      ->where('jurusan', $jurusan)
       ->get();
+      //return response()->json(['log' => DB::getQueryLog()]);
 
-      $data = $students->map(function($item) {
-        return [
-          'student' => $item,
-        ];
-      });
-
-      foreach($data as $key => $item) {
-        $student = $item['student'];
+      foreach($students as $key => &$item) {
         $invoices = DB::table('tr_invoices')
         ->select(
           '*',
           DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
-          DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date'),
+          DB::raw('DATE_FORMAT(tr_invoices.payments_date, "%d-%m-%Y") as payments_date'),
           DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
         )
         ->join('tr_invoice_details', 'tr_invoice_details.invoices_id', 'tr_invoices.id')
-        ->where('periode', 'LIKE', '%'.$year)
-        ->where('temps_id', $student->id)
+        ->whereIn('periode', $periode)
+        ->where('temps_id', $item->id)
         ->get();
-        $data[$key]['invoices'] = $invoices;
-      }
-      return response()->json($data);
+
+        $mappedInvoices = $invoices->mapWithKeys(function($item) {
+          return [
+            intval($item->periode_month) => $item
+          ];
+        });
+
+        $payments = DB::table('mt940')
+        ->select(
+          DB::raw('SUM(nominal) as total')
+        )
+        ->whereIn('periode_to', $periode)
+        ->where('temps_id', $item->id)
+        ->get();
+
+        $item->invoices = $mappedInvoices;
+        $item->payments = $payments;
+        $item->total_invoices = $mappedInvoices->sum('total');
+        $item->total_payments = $payments->sum('total');
+      };
+
+      return response()->json($students);
     }
 }
