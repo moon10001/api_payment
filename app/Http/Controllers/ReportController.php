@@ -75,6 +75,7 @@ class ReportController extends Controller
 
     public function recap(Request $request) {
       $vaCodes = [];
+      $year = $request->year;
       $startYear = $request->year;
       $endYear = intval($startYear) + 1;
       $periode = [
@@ -120,33 +121,30 @@ class ReportController extends Controller
         $invoices = DB::table('tr_invoices')
         ->select(
           '*',
+	  'payments_date',
           DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
-          DB::raw('DATE_FORMAT(tr_invoices.payments_date, "%d-%m-%Y") as payments_date'),
+          DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
           DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
         )
-        ->join('tr_invoice_details', 'tr_invoice_details.invoices_id', 'tr_invoices.id')
-        ->whereIn('periode', $periode)
+        ->whereBetween('periode_date', ['20'.$year.'-07-01', '20'.strval(intval($year)+1).'-06-01'])
         ->where('temps_id', $item->id)
         ->get();
 
-        $mappedInvoices = $invoices->mapWithKeys(function($item) {
+        $mappedInvoices = $invoices->where('payments_date', '!=', null)->groupBy('payments_date')->mapWithKeys(function($item, $key) {
+          $timestamp = strtotime($key);
+	  $month = date('m', $timestamp);
+	  $values = $item->values();
+
+          $total = $values->sum('total');
           return [
-            intval($item->periode_month) => $item
+            intval($month) => $total
           ];
         });
 
-        $payments = DB::table('mt940')
-        ->select(
-          DB::raw('SUM(nominal) as total')
-        )
-        ->whereIn('periode_to', $periode)
-        ->where('temps_id', $item->id)
-        ->get();
-
+	$item->amount = $invoices->first()->total;
         $item->invoices = $mappedInvoices;
-        $item->payments = $payments;
-        $item->total_invoices = $mappedInvoices->sum('total');
-        $item->total_payments = $payments->sum('total');
+        $item->total_invoices = $invoices->sum('total');
+        $item->total_payments = $mappedInvoices->sum('total');
       };
 
       return response()->json($students);
