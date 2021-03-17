@@ -20,7 +20,7 @@ class OptionsController extends Controller
       $vaCodes = [];
       if ($request->unit_id) {
         $vaCodes = collect($request->unit_id)->map(function($item) {
-          return $item['va_code'];
+          return $item;
         });
       }
       switch($type) {

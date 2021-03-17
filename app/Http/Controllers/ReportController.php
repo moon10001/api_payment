@@ -94,7 +94,7 @@ class ReportController extends Controller
       ];
       if ($request->unit_id) {
         $vaCodes = collect($request->unit_id)->map(function($item) {
-          return $item['va_code'];
+          return $item;
         });
       }
       $classArray = $request->class;
@@ -116,7 +116,7 @@ class ReportController extends Controller
       ->orderBy('name')
       ->get();
       //return response()->json(['log' => DB::getQueryLog()]);
-
+      $monthlyTotal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       foreach($students as $key => &$item) {
         $invoices = DB::table('tr_invoices')
         ->select(
@@ -130,11 +130,12 @@ class ReportController extends Controller
         ->where('temps_id', $item->id)
         ->get();
 
-        $mappedInvoices = $invoices->where('payments_date', '!=', null)->groupBy('payments_date')->mapWithKeys(function($item, $key) {
+        $mappedInvoices = $invoices->where('payments_date', '!=', null)->groupBy('payments_date')->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
           $timestamp = strtotime($key);
 	        $month = date('m', $timestamp);
 	        $values = $item->values();
           $total = $values->sum('total');
+          $monthlyTotal[intval($month)-1] = $monthlyTotal[intval($month)-1] + $total;
           return [
             intval($month) => $total
           ];
@@ -149,6 +150,7 @@ class ReportController extends Controller
 
       return response()->json([
         'data' => $students,
+        'total_monthly' => $monthlyTotal,
         'total_payments' => $students->sum('total_payments'),
         'total_invoices' => $students->sum('total_invoices'),
         'total_diff' => $students->sum('diff'),
