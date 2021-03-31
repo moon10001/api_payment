@@ -20,12 +20,12 @@ class OptionsController extends Controller
       $vaCodes = [];
       if ($request->unit_id) {
         $vaCodes = collect($request->unit_id)->map(function($item) {
-          return $item;
+          return $item['va_code'];
         });
       }
+     
       switch($type) {
         case 'va-code':
-
           $results = DB::table('ms_temp_siswa')
           ->select('*')
           ->whereIn('units_id', $vaCodes)
