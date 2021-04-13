@@ -50,26 +50,32 @@ class ReportController extends Controller
       ->where('temps_id', $request->va_code)
       ->get();
 
-      $lastInvoice= $invoices->whereNull('payments_date')->first();
-
       $liabilities = [];
-      if ($lastInvoice) {
-        $liabilities = DB::table('tr_payment_details')
-        ->select(
-          'tr_payment_details.invoices_id',
-          'tr_payment_details.periode',
-          'tr_payment_details.nominal',
-          'prm_payments.name'
-          )
-        ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-        ->where('invoices_id', $lastInvoice->id)
-        ->get();
+      $lastInvoice = [];
+      $lastPaidInvoice = $invoices->whereNotNull('payments_date')->last();
+      if ($lastPaidInvoice) {
+      	$nextPaymentMonth = $lastPaidInvoice->periode_month == 12 ? 1 : intval($lastPaidInvoice->periode_month) + 1;
+      	$lastInvoice= $invoices->whereNull('payments_date')->where('periode_month', '=', $nextPaymentMonth)->first();
+      	if ($lastInvoice) {
+        	$liabilities = DB::table('tr_payment_details')
+        	->select(
+          	'tr_payment_details.invoices_id',
+          	'tr_payment_details.periode',
+          	'tr_payment_details.nominal',
+          	'prm_payments.name'
+         	)
+        	->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
+        	->where('invoices_id', $lastInvoice->id)
+        	->get();
+      	}
       }
 
       return response()->json([
         'student' => $student,
         'invoices' => $invoices,
         'liabilities' => $liabilities,
+	'lastInvoice' => $lastInvoice,
+	'lastPaidInvoice' => $lastPaidInvoice,
       ]);
     }
 
