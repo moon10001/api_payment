@@ -123,32 +123,36 @@ class ReportController extends Controller
       ->get();
       //return response()->json(['log' => DB::getQueryLog()]);
       $monthlyTotal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      foreach($students as $key => &$item) {
-        $invoices = DB::table('tr_invoices')
-        ->select(
-          '*',
-	        'payments_date',
-          DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
-          DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
-	  DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
-          DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
-        )
-        ->whereBetween('periode_date', ['20'.$year.'-07-01', '20'.strval(intval($year)+1).'-06-01'])
-        ->where('temps_id', $item->id)
-        ->get();
+     
+      $invoices = DB::table('tr_invoices')
+      ->select(
+        '*',
+	      'payments_date',
+        //DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
+        DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
+        DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
+        DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
+      )
+      ->whereBetween('periode_date', ['20'.$year.'-07-01', '20'.strval(intval($year)+1).'-06-01'])
+      ->whereIn('temps_id', $students->pluck('id')->toArray())
+      ->get();
 
-        $mappedInvoices = $invoices->where('payments_date', '!=', null)->groupBy('payment_month')->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
-          $timestamp = strtotime($key);
-	        $month = $key;
-	        $values = $item->values();
-          $total = $values->sum('total');
-          $monthlyTotal[intval($month)-1] = $monthlyTotal[intval($month)-1] + $total;
-          return [
-            intval($month) => $total
-          ];
-        });
+	  foreach($students as $key => &$item) {
+        $mappedInvoices = $invoices->where('payments_date', '!=', null)
+        	->where('temps_id', $item->id)
+        	->groupBy('payment_month')
+        	->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
+          		$timestamp = strtotime($key);
+	        	$month = $key;
+	        	$values = $item->values();
+          		$total = $values->sum('total');
+        	  	$monthlyTotal[intval($month)-1] = $monthlyTotal[intval($month)-1] + $total;
+         		return [
+            		intval($month) => $total
+          		];
+        	});
 
-	      $item->amount = $invoices->isNotEmpty() ? $invoices->first()->nominal : 0;
+	    $item->amount = $invoices->isNotEmpty() ? $invoices->first()->nominal : 0;
         $item->invoices = $mappedInvoices;
         $item->total_invoices = $invoices->sum('total');
         $item->total_payments = $mappedInvoices->sum();
