@@ -135,6 +135,7 @@ class ReportController extends Controller
       )
       ->whereBetween('periode_date', ['20'.$year.'-07-01', '20'.strval(intval($year)+1).'-06-01'])
       ->whereIn('temps_id', $students->pluck('id')->toArray())
+      ->where('tr_invoices.id','like','INV-%')
       ->get();
 
 	  foreach($students as $key => &$item) {
