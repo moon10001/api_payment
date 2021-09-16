@@ -2,8 +2,10 @@
 
 namespace App\Console;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
+use App\Tasks\ReconcilePaymentTask;
 
 class Kernel extends ConsoleKernel
 {
@@ -24,6 +26,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        //
+        $schedule->exec('echo RUNNING')->everyMinute();
+        $schedule->call(function() {
+          $task = new ReconcilePaymentTask();
+          $task->reconcile();
+        })->daily();
     }
 }
