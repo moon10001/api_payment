@@ -17,11 +17,18 @@ class ImportController extends BaseController
         $this->output = $consoleOutput;
     }
 
-    private function getTrInvoice($id) {
+    private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
       ->select('nominal', 'payments_date')
       ->where('id', $id)
       ->first();
+
+      if(empty($trInvoice) || !$trInvoice) {
+        $trInvoice = DB::table('tr_invoices')
+        ->select('nominal', 'payments_date')
+        ->where('temps_id', $tempsId)
+        ->first();
+      }
       return $trInvoice;
     }
 
@@ -100,10 +107,12 @@ class ImportController extends BaseController
                 ]);
 
                 $trInvoice = $this->getTrInvoice($id);
-                if ($trInvoice) {
+                if ($trInvoice && !empty($trInvoice)) {
                   $sum = $trInvoice->nominal;
                   $this->updateTrInvoice($id, $data['payments_date']);
                   $this->insertTrInvoiceDetails($id, $data);
+                } else {
+                  $trInvoice = $this->getTrInvoice()
                 }
 
 
