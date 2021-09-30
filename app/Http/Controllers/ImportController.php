@@ -87,28 +87,29 @@ class ImportController extends BaseController
                 $lineContent = substr($line, 7);
                 $periode = substr($lineContent, 26, 8);
                 $va = substr($lineContent, 17, 17);
-               	$tempsId = substr($va, 0, 9);             
+               	$tempsId = substr($va, 0, 9);
                 $sum = 0;
-                
- 				if (!str_starts_with($periode, 4)) {
-	                $fromMonth = substr($periode, 0, 2);
-    	            $toMonth = substr($periode, 4, 2);
-        	        $fromYear = substr($periode, 2, 2);
-            	    $toYear = substr($periode, 2, 2);
-               		$fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
-                	$toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
-                	$id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
-                	$periode_to = date('my', $toTimestamp);
-                	$periode_from = date('my', $fromTimestamp);
- 				} else {
- 					$term = $substr($periode, 5, 3);
- 					$id = 'UPP-' . $tempsId . $term;
- 					if(str_starts_with($periode, '41101')) {
- 						$id = 'DPP-' . $tempsId . $term; 
- 					}
- 					$periode_to = $term;
- 					$periode_from = $term;
- 				}
+
+
+                if (!str_starts_with($periode, 4)) {
+                  $fromMonth = substr($periode, 0, 2);
+                  $toMonth = substr($periode, 4, 2);
+                  $fromYear = substr($periode, 2, 2);
+                  $toYear = substr($periode, 2, 2);
+                  $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
+                  $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
+                  $id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
+                  $periode_to = date('my', $toTimestamp);
+                  $periode_from = date('my', $fromTimestamp);
+                } else {
+                  $term = substr($periode, 5, 3);
+                  $id = 'UPP-' . $tempsId . $term;
+                  if(str_starts_with($periode, '41101')) {
+                    $id = 'DPP-' . $tempsId . $term;
+                  }
+                  $periode_to = $term;
+                  $periode_from = $term;
+                }
 
                 $data = array_merge($data, [
                   'va' => $va,
@@ -118,15 +119,12 @@ class ImportController extends BaseController
                   'periode_from' => $periode_from
                 ]);
 
-                $trInvoice = $this->getTrInvoice($id);
+                $trInvoice = $this->getTrInvoice($id, $tempsId);
                 if ($trInvoice && !empty($trInvoice)) {
                   $sum = $trInvoice->nominal;
                   $this->updateTrInvoice($id, $data['payments_date']);
                   $this->insertTrInvoiceDetails($id, $data);
-                } else {
-                  $trInvoice = $this->getTrInvoice();
                 }
-
 
                 if ($periode_to !== $periode_from) {
                   $datediff = round(($toTimestamp - $fromTimestamp)/(60 * 60 * 24 * 30));
