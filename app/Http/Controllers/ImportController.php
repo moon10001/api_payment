@@ -85,18 +85,30 @@ class ImportController extends BaseController
             foreach(explode(PHP_EOL, $file) as $line) {
               if (str_starts_with($line, ':86:UBP')) {
                 $lineContent = substr($line, 7);
-                $fromMonth = substr($lineContent, 26, 2);
-                $toMonth = substr($lineContent, 30, 2);
-                $fromYear = substr($lineContent, 28, 2);
-                $toYear = substr($lineContent, 32, 2);
-                $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
-                $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
+                $periode = substr($lineContent, 26, 8);
                 $va = substr($lineContent, 17, 17);
-                $tempsId = substr($va, 0, 9);
-                $id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
-                $periode_to = date('my', $toTimestamp);
-                $periode_from = date('my', $fromTimestamp);
+               	$tempsId = substr($va, 0, 9);             
                 $sum = 0;
+                
+ 				if (!str_starts_with($periode, 4)) {
+	                $fromMonth = substr($periode, 0, 2);
+    	            $toMonth = substr($periode, 4, 2);
+        	        $fromYear = substr($periode, 2, 2);
+            	    $toYear = substr($periode, 2, 2);
+               		$fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
+                	$toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
+                	$id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
+                	$periode_to = date('my', $toTimestamp);
+                	$periode_from = date('my', $fromTimestamp);
+ 				} else {
+ 					$term = $substr($periode, 5, 3);
+ 					$id = 'UPP-' . $tempsId . $term;
+ 					if(str_starts_with($periode, '41101')) {
+ 						$id = 'DPP-' . $tempsId . $term; 
+ 					}
+ 					$periode_to = $term;
+ 					$periode_from = $term;
+ 				}
 
                 $data = array_merge($data, [
                   'va' => $va,

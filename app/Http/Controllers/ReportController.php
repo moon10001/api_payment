@@ -139,8 +139,8 @@ class ReportController extends Controller
       ->get();
 
 	  foreach($students as $key => &$item) {
-        $mappedInvoices = $invoices->where('payments_date', '!=', null)
-        	->where('temps_id', $item->id)
+	  	$filteredInvoices = $invoices->where('temps_id', $item->id);
+        $mappedInvoices = $filteredInvoices->where('payments_date', '!=', null)
         	->groupBy('payment_month')
         	->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
           		$timestamp = strtotime($key);
@@ -153,9 +153,9 @@ class ReportController extends Controller
           		];
         	});
 
-	    $item->amount = $invoices->isNotEmpty() ? $invoices->first()->nominal : 0;
+	    $item->amount = $filteredInvoices->isNotEmpty() ? $filteredInvoices->first()->nominal : 0;
         $item->invoices = $mappedInvoices;
-        $item->total_invoices = $invoices->sum('total');
+        $item->total_invoices = $filteredInvoices->sum('total');
         $item->total_payments = $mappedInvoices->sum();
         $item->diff = $item->total_invoices - $item->total_payments;
       };
