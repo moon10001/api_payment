@@ -124,7 +124,7 @@ class ImportController extends BaseController
                   $this->updateTrInvoice($id, $data['payments_date']);
                   $this->insertTrInvoiceDetails($id, $data);
                 } else {
-                  $trInvoice = $this->getTrInvoice()
+                  $trInvoice = $this->getTrInvoice();
                 }
 
 
