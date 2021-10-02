@@ -95,7 +95,7 @@ class ImportController extends BaseController
                   $fromMonth = substr($periode, 0, 2);
                   $toMonth = substr($periode, 4, 2);
                   $fromYear = substr($periode, 2, 2);
-                  $toYear = substr($periode, 2, 2);
+                  $toYear = substr($periode, 6, 2);
                   $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
                   $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
                   $id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
