@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Jobs\UpdateTransactionsTableJob;
 
 
-class UpdateTrInvoicesTableJob extends Job
+class ReconcilePaymentJob extends Job
 {
     /**
      * Execute the job.

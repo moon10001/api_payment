@@ -1,6 +1,7 @@
+<?php
 return [
 
-   'default' => 'accounts',
+   'default' => 'mysql',
 
    'connections' => [
         'mysql' => [
