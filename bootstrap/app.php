@@ -67,7 +67,7 @@ $app->singleton('filesystem', function ($app) {
 $app->configure('app');
 $app->configure('filesystems');
 $app->configure('tinker');
-
+$app->configure('database');
 
 /*
 |--------------------------------------------------------------------------

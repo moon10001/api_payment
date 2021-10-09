@@ -6,7 +6,7 @@ use Laravel\Lumen\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Output\ConsoleOutput;
-use App\Jobs\UpdateTrInvoicesTableJob;
+use App\Jobs\ReconcilePaymentJob;
 use Illuminate\Support\Facades\DB;
 
 class ImportController extends BaseController
@@ -163,6 +163,7 @@ class ImportController extends BaseController
               }
             }
           }
+          dispatch(new ReconcilePaymentJob);
         } catch (Exception $e) {
           throw $e;
         }
