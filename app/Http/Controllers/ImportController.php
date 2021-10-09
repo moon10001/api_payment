@@ -62,6 +62,10 @@ class ImportController extends BaseController
       DB::table('mt940')
       ->updateOrInsert([
           'va' => $data['va'],
+          'temps_id' => $data['temps_id'],
+          'payment_date' => $data['va'],
+          'periode_from' => $data['periode_from'],
+          'periode_to' => $data['periode_to'],
         ], [
         'va' => $data['va'],
         'temps_id' => $data['temps_id'],
@@ -81,6 +85,7 @@ class ImportController extends BaseController
         try {
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
+            var_dump($filename);
             $data = [];
             foreach(explode(PHP_EOL, $file) as $line) {
               if (str_starts_with($line, ':86:UBP')) {
