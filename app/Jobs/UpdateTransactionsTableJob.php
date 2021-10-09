@@ -180,7 +180,7 @@ class UpdateTrInvoicesTableJob extends Job
       $details = [[
         'journals_id' => $journalId,
         'code_of_account' => $this->bankCoa,
-        'description' => $item['name'];
+        'description' => $item['name'],
         'credit' => $transactions->sum('nominal'),
         'debit' => null,
       ]];
@@ -188,7 +188,7 @@ class UpdateTrInvoicesTableJob extends Job
         $coa = $paymentCoa[$item['name']];
         array_push($details, [
           'journals_id' => $journalId,
-          'description' => $item['name'];
+          'description' => $item['name'],
           'code_of_account' => $coa,
           'credit' => null,
           'debit' => $item['nominal'],
@@ -201,7 +201,7 @@ class UpdateTrInvoicesTableJob extends Job
     private function createReconciliation($unitId, $date, $items, $isCredit = false) {
       $sum = $items->sum('nominal');
       $journal = [
-        'journal_number' => $this->generateJournalNumber($date, $unitId, false)
+        'journal_number' => $this->generateJournalNumber($date, $unitId, false),
         'units_id' => $isCredit ? $this->desctinationUnit : $unitId,
         'code_of_account' => $this->bankCoa,
         'date' => $date,
