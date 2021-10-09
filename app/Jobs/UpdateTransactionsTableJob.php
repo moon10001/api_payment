@@ -5,7 +5,7 @@ namespace App\Jobs;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-class UpdateTrInvoicesTableJob extends Job
+class UpdateTransactionsTableJob extends Job
 {
     private $from;
     private $to;
