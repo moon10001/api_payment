@@ -9,6 +9,7 @@ use App\Jobs\UpdateTransactionsTableJob;
 
 class ReconcilePaymentJob extends Job
 {
+    public function __construct() {}
     /**
      * Execute the job.
      *
