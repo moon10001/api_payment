@@ -94,10 +94,10 @@ class UpdateTransactionsTableJob extends Job
         $transactions = DB::table('daily_reconciled_reports')
         ->where(function($q) use ($from, $to) {
           if(isset($from) && !empty($from)) {
-            $q->where('mt940.payment_date', '>=', $from);
+            $q->where('payment_date', '>=', $from);
           }
           if(isset($to) && !empty($to)) {
-            $q->where('mt940.payment_date', '<=', $to);
+            $q->where('payment_date', '<=', $to);
           }
         })
         ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
