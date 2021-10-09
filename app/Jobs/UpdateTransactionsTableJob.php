@@ -163,7 +163,7 @@ class UpdateTrInvoicesTableJob extends Job
 
     private function createTransaction($unitId, $date, $items) {
       $journal = [
-        'journal_number' => $this->generateJournalNumber($date, $unitId)
+        'journal_number' => $this->generateJournalNumber($date, $unitId),
         'units_id' => $unitId,
         'journal_type' => 'BANK',
         'code_of_account' => $this->bankCoa,
