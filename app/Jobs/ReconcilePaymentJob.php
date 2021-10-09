@@ -41,11 +41,12 @@ class ReconcilePaymentJob extends Job
           ->join('tr_invoices', 'tr_invoices.temps_id', 'mt940.temps_id')
           ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
           ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-          ->where('mt940.payment_date', $date)
+          ->where('mt940.payment_date', '<=', $date)
           ->where('mt940.va', 'LIKE', $va->va_code.'%')
           ->groupBy('mt940.payment_date', 'prm_payments.name', 'prm_payments.id')
           ->orderBy('mt940.payment_date', 'ASC')
           ->get();
+          dd($transactions);
 
           if ($transactions->isNotEmpty()) {
             foreach($transactions as $transaction) {
