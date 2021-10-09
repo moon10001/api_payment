@@ -38,7 +38,7 @@ class UpdateTransactionsTableJob extends Job
      *
      * @return void
      */
-    public function __construct($from, $to, $unitId)
+    public function __construct($from = '', $to = '', $unitId = '')
     {
         $this->from = $from;
         $this->to = $to;
@@ -83,7 +83,7 @@ class UpdateTransactionsTableJob extends Job
       $unitsVA = Cache::get('prm_va', function() {
         $res = DB::table('prm_va')
         ->where(function($q) use ($unitId) {
-          if(isset($unitId)) {
+          if(isset($unitId) && !empty($unitId)) {
             $q->where('unit_id', $unitId);
           }
         })->get();
@@ -93,10 +93,10 @@ class UpdateTransactionsTableJob extends Job
       foreach($unitsVA as $va) {
         $transactions = DB::table('daily_reconciled_reports')
         ->where(function($q) use ($from, $to) {
-          if(isset($from)) {
+          if(isset($from) && !empty($from)) {
             $q->where('mt940.payment_date', '>=', $from);
           }
-          if(isset($to)) {
+          if(isset($to) && !empty($to)) {
             $q->where('mt940.payment_date', '<=', $to);
           }
         })

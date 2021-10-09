@@ -61,7 +61,7 @@ class ReconcilePaymentJob extends Job
             }
           }
         }
-        dispatch(new UpdateTransactionsTableJob);
+        dispatch(new UpdateTransactionsTableJob($date));
       } catch (Exception $e) {
         throw $e;
       }
