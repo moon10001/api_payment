@@ -38,8 +38,6 @@ class ReconcilePaymentTask {
         ->orderBy('mt940.payment_date', 'ASC')
         ->get();
 
-        dd(DB::getQueryLog());
-
         if ($transactions->isNotEmpty()) {
           foreach($transactions as $transaction) {
             DB::table('daily_reconciled_reports')->updateOrInsert([
