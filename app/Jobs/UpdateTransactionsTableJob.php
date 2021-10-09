@@ -80,7 +80,7 @@ class UpdateTransactionsTableJob extends Job
 
       $data = [];
 
-      $unitsVA = Cache::get('prm_va', function() {
+      $unitsVA = Cache::get('prm_va', function() use ($unitId) {
         $res = DB::table('prm_va')
         ->where(function($q) use ($unitId) {
           if(isset($unitId) && !empty($unitId)) {
@@ -228,14 +228,5 @@ class UpdateTransactionsTableJob extends Job
 
       DB::connection('finance_db')->table('journal_details')->insert($details);
       $this->logJournal($journalId, $journal, $details);
-    }
-
-    private function fetch($from, $to) {
-      $data = $this->restUtil->get(env('API_BRIDGE').'/payment/fetch', [
-          'from' => $from,
-          'to' => $to,
-      ]);
-
-
     }
 }
