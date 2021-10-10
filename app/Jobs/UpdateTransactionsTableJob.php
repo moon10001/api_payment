@@ -150,8 +150,10 @@ class UpdateTransactionsTableJob extends Job
           'journals_id' => $journalId,
           'journal_number' => $journal['journal_number'],
           'code_of_account' => $detail['code_of_account'],
+          'description' => $detail['description'],
           'debit' => $detail['credit'],
           'credit' => $detail['debit'],
+          'units_id' => $journal['units_id'],
           'countable' => 1,
         ]);
       }
