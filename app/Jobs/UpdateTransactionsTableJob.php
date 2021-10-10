@@ -175,22 +175,22 @@ class UpdateTransactionsTableJob extends Job
 
       $details = [];
       foreach($items as $item) {
-        $coa = $paymentCoa[$item['name']];
+        $coa = $paymentCoa[$item->name];
         array_push($details, [
           'journals_id' => $journalId,
           'code_of_account' => $this->bankCoa,
-          'description' => $item['name'],
+          'description' => $item->name,
           'journal_source' => 'BANK',
-          'credit' => $transactions->sum('nominal'),
+          'credit' => $item->nominal,
           'debit' => null,
         ]);
         array_push($details, [
           'journals_id' => $journalId,
-          'description' => $item['name'],
+          'description' => $item->name,
           'code_of_account' => $coa,
           'journal_source' => null,
           'credit' => null,
-          'debit' => $item['nominal'],
+          'debit' => $item->nominal,
         ]);
       }
       DB::connection('finance_db')->table('journal_details')->insert($details);
@@ -230,18 +230,5 @@ class UpdateTransactionsTableJob extends Job
 
       DB::connection('finance_db')->table('journal_details')->insert($details);
       $this->logJournal($journalId, $journal, $details);
-    }
-
-    private function logJournal($journalId, $journal, $details) {
-      foreach($details as $detail) {
-        DB::connection('finance_db')->table('journal_logs')->insert([
-          'journal_number' => $journal['journal_number'],
-          'journals_id' = $journalId,
-          'description' => $detail['description'],
-          'date' => $journal['date'],
-          'credit' => $detail['debit'],
-          'debit' => $detail['credit']
-        ]);
-      }
     }
 }
