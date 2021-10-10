@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use App\Jobs\ReconcilePaymentJob;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
+
 
 class ImportController extends BaseController
 {
@@ -167,7 +169,8 @@ class ImportController extends BaseController
               }
             }
           }
-          dispatch(new ReconcilePaymentJob);
+          dispatch(new ReconcilePaymentJob());
+          Artisan::call('queue:work');
         } catch (Exception $e) {
           throw $e;
         }
