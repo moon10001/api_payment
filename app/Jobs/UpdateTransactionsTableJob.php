@@ -31,6 +31,7 @@ class UpdateTransactionsTableJob extends Job
       'Uang Makan' => 41501,
       'Pel Kasih' => 42201,
       'Uang Komputer' => 41401,
+      'Uang Pendaftaran' => 42101,
       'DPP' => 41101,
       'UPP' => 41201,
     ];
