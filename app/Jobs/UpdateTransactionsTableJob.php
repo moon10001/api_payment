@@ -175,7 +175,7 @@ class UpdateTransactionsTableJob extends Job
 
       $details = [];
       foreach($items as $item) {
-        $coa = $paymentCoa[$item->name];
+        $coa = $this->paymentCoa[$item->name];
         array_push($details, [
           'journals_id' => $journalId,
           'code_of_account' => $this->bankCoa,
