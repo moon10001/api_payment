@@ -227,6 +227,7 @@ class UpdateTransactionsTableJob extends Job
         'code_of_account' => $this->reconciliationCoa,
         'description' => 'Rekonsiliasi Pembayaran',
         'credit' => $isCredit ? null : $sum,
+        'journal_source' => null,
         'debit' => $isCredit ? $sum : null,
       ]];
 
