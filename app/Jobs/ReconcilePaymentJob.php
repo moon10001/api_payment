@@ -50,8 +50,8 @@ class ReconcilePaymentJob extends Job
             continue;
           }
 
-          $filteredTransactions = $transactions::all()->filter(function($transaction) use ($va) {
-            return starts_with($transactions->va, $va->code);
+          $filteredTransactions = $transactions->filter(function($transaction) use ($va) {
+            return str_starts_with($transaction->va, $va->va_code);
           });
 
           if ($filteredTransactions->isNotEmpty()) {

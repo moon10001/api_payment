@@ -85,7 +85,7 @@ class ImportController extends BaseController
     public function import() {
       DB::transaction(function() {
         try {
-          foreach(Storage::disk('mt940')->files('/') as $filename) {
+/*          foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
             $data = [];
             foreach(explode(PHP_EOL, $file) as $line) {
@@ -168,7 +168,7 @@ class ImportController extends BaseController
                 ];
               }
             }
-          }
+          }*/
           dispatch(new ReconcilePaymentJob());
           Artisan::call('queue:work');
         } catch (Exception $e) {

@@ -57,8 +57,8 @@ class UpdateTransactionsTableJob extends Job
         try {
           $data = $this->getReconciliatedData();
           foreach($data as $payment) {
-            $unitId = $payment['unit_id'];
-            $transactions = collect($payment['details']);
+            $unitId = $payment['units_id'];
+            $transactions = collect($payment['transactions']);
             foreach($transactions as $date => $items) {
               $this->createTransaction($unitId, $date, $items);
               $this->createReconciliation($unitId, $date, $items);
@@ -79,15 +79,12 @@ class UpdateTransactionsTableJob extends Job
 
       $data = [];
 
-      $unitsVA = Cache::get('prm_va', function() use ($unitId) {
-        $res = DB::table('prm_va')
+      $unitsVA = DB::table('prm_va')
         ->where(function($q) use ($unitId) {
           if(isset($unitId) && !empty($unitId)) {
             $q->where('unit_id', $unitId);
           }
         })->get();
-        return $res;
-      });
 
       foreach($unitsVA as $va) {
         $transactions = DB::table('daily_reconciled_reports')
@@ -128,13 +125,13 @@ class UpdateTransactionsTableJob extends Job
 
       $counter = str_pad(
       strval(
-      Journals::counter(
-        'BANK',
-        $isCredit,
-        $month,
-        date('Y', strtotime($date)),
-        $unitId
-      )->get()->count() + 1), 3,'0',STR_PAD_LEFT);
+      DB::connection('finance_db')->table('journals')
+      ->where('journal_type', 'BANK')
+      ->where('is_credit', $isCredit)
+      ->whereRaw('MONTH(date) = ?', $month)
+      ->whereRaw('YEAR(date) = ?', $year)
+      ->where('units_id', $unitId)
+      ->get()->count() + 1), 3,'0',STR_PAD_LEFT);
 
       $code = 'BB';
       if($isCredit) {
@@ -166,7 +163,7 @@ class UpdateTransactionsTableJob extends Job
         'units_id' => $unitId,
         'journal_type' => 'BANK',
         'code_of_account' => $this->bankCoa,
-        'type' => 1,
+        'form_type' => 1,
         'source' => 'BANK',
         'date' => $date,
         'is_posted' => 1,
