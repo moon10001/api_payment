@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Laravel\Lumen\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Console\Command;
-use Illuminate\Queue\Queue;
+use Illuminate\Support\Facades\Bus;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use App\Jobs\ReconcilePaymentJob;
 use Illuminate\Support\Facades\DB;
@@ -170,8 +170,10 @@ class ImportController extends BaseController
               }
             }
           }*/
-          Queue::push(new ReconcilePaymentJob());
-          Artisan::call('queue:work');
+          Bus::chain([
+            new ReconcilePaymentJob,
+            new UpdateTransactionsTableJob
+          ])->dispatch()->afterResponse();
         } catch (Exception $e) {
           throw $e;
         }
