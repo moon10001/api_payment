@@ -152,7 +152,7 @@ class UpdateTransactionsTableJob extends Job
           'code_of_account' => $details->coa,
           'debit' => $detail['credit'],
           'credit' => $detail['debit'],
-          'is_countable' => 1,
+          'countable' => 1,
         ]);
       }
     }
