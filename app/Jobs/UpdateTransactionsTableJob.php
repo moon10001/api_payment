@@ -149,7 +149,7 @@ class UpdateTransactionsTableJob extends Job
         DB::connection('finance_db')->table('journal_logs')->insert([
           'journals_id' => $journalId,
           'journal_number' => $journal['journal_number'],
-          'code_of_account' => $detail['coa'],
+          'code_of_account' => $detail['code_of_account'],
           'debit' => $detail['credit'],
           'credit' => $detail['debit'],
           'countable' => 1,
