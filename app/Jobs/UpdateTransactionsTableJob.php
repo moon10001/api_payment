@@ -66,7 +66,6 @@ class UpdateTransactionsTableJob extends Job
             }
           }
         } catch (Exception $e) {
-          DB::Rollback();
           throw $e;
         }
       });

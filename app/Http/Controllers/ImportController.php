@@ -85,7 +85,6 @@ class ImportController extends BaseController
         try {
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
-            var_dump($filename);
             $data = [];
             foreach(explode(PHP_EOL, $file) as $line) {
               if (str_starts_with($line, ':86:UBP')) {
