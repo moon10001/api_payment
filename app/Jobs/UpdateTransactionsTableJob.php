@@ -211,7 +211,7 @@ class UpdateTransactionsTableJob extends Job
         'form_type' => 2,
         'is_posted' => 1,
         'is_credit' => $isCredit,
-        'prm_school_units_id' => $isCredit ? $unitId : $this->$destinationUnit,
+        'prm_school_units_id' => $isCredit ? $unitId : $this->destinationUnit,
       ];
       $journalId = DB::connection('finance_db')->table('journals')->insertGetId($journal);
 
