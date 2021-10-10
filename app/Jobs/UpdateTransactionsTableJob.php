@@ -75,8 +75,8 @@ class UpdateTransactionsTableJob extends Job
 
 
     public function getReconciliatedData() {
-      $from = $this->from;
-      $to = $this->to;
+      $from = isset($this->from) && !empty($this->from) ? $this->from : date('Y-m-d');
+      $to = isset($this->to) && !empty($this->to) ? $this->to : date('Y-m-d');
       $unitId = $this->unitId;
 
       $data = [];

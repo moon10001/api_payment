@@ -23,7 +23,6 @@ class ReconcilePaymentJob extends Job
           $res = DB::table('prm_va')->get();
           return $res;
         });
-        DB::enableQueryLog();
 
         $transactions = DB::table('mt940')
         ->select(
@@ -38,12 +37,10 @@ class ReconcilePaymentJob extends Job
         ->join('tr_invoices', 'tr_invoices.temps_id', 'mt940.temps_id')
         ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-        ->where('mt940.payment_date', '<=', $date)
+        ->whereRaw('DATE(mt940.created_at) = ?', $date)
         ->groupBy('mt940.va', 'mt940.payment_date', 'prm_payments.name', 'prm_payments.id')
         ->orderBy('mt940.payment_date', 'ASC')
         ->get();
-
-        var_dump(DB::getQueryLog());
 
         foreach($unitsVA as $va) {
           if (empty($va->va_code)) {
