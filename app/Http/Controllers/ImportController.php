@@ -171,10 +171,12 @@ class ImportController extends BaseController
               }
             }
           }*/
-          Bus::chain([
-            new ReconcilePaymentJob,
-            new UpdateTransactionsTableJob
-          ])->dispatch()->afterResponse();
+          $this->dispatch(
+            (new ReconcilePaymentJob)
+            ->chain([
+              new UpdateTransactionsTableJob
+              ])
+          )->afterResponse();
         } catch (Exception $e) {
           throw $e;
         }
