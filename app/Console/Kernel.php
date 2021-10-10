@@ -31,5 +31,6 @@ class Kernel extends ConsoleKernel
           $task = new ReconcilePaymentTask();
           $task->reconcile();
         })->daily();
+        $schedule->command('queue:work')->dailyAt('07:40');
     }
 }
