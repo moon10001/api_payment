@@ -173,19 +173,22 @@ class UpdateTransactionsTableJob extends Job
       $journalId = DB::connection('finance_db')->table('journals')
       ->insertGetId($journal);
 
-      $details = [[
-        'journals_id' => $journalId,
-        'code_of_account' => $this->bankCoa,
-        'description' => $item['name'],
-        'credit' => $transactions->sum('nominal'),
-        'debit' => null,
-      ]];
+      $details = [];
       foreach($items as $item) {
         $coa = $paymentCoa[$item['name']];
         array_push($details, [
           'journals_id' => $journalId,
+          'code_of_account' => $this->bankCoa,
+          'description' => $item['name'],
+          'journal_source' => 'BANK',
+          'credit' => $transactions->sum('nominal'),
+          'debit' => null,
+        ]);
+        array_push($details, [
+          'journals_id' => $journalId,
           'description' => $item['name'],
           'code_of_account' => $coa,
+          'journal_source' => null,
           'credit' => null,
           'debit' => $item['nominal'],
         ]);
@@ -198,7 +201,7 @@ class UpdateTransactionsTableJob extends Job
       $sum = $items->sum('nominal');
       $journal = [
         'journal_number' => $this->generateJournalNumber($date, $unitId, false),
-        'units_id' => $isCredit ? $this->desctinationUnit : $unitId,
+        'units_id' => $isCredit ? $this->destinationUnit : $unitId,
         'code_of_account' => $this->bankCoa,
         'date' => $date,
         'journal_type' => 'BANK',
@@ -213,16 +216,32 @@ class UpdateTransactionsTableJob extends Job
       $details = [[
         'journals_id' => $journalId,
         'code_of_account' => $this->bankCoa,
+        'description' => 'Rekonsiliasi Pembayaran',
         'credit' => $isCredit ? $sum : null,
+        'journal_source' => 'BANK',
         'debit' => $isCredit ? null : $sum,
       ], [
         'journals_id' => $journalId,
         'code_of_account' => $this->reconciliationCoa,
+        'description' => 'Rekonsiliasi Pembayaran',
         'credit' => $isCredit ? null : $sum,
         'debit' => $isCredit ? $sum : null,
       ]];
 
       DB::connection('finance_db')->table('journal_details')->insert($details);
       $this->logJournal($journalId, $journal, $details);
+    }
+
+    private function logJournal($journalId, $journal, $details) {
+      foreach($details as $detail) {
+        DB::connection('finance_db')->table('journal_logs')->insert([
+          'journal_number' => $journal['journal_number'],
+          'journals_id' = $journalId,
+          'description' => $detail['description'],
+          'date' => $journal['date'],
+          'credit' => $detail['debit'],
+          'debit' => $detail['credit']
+        ]);
+      }
     }
 }
