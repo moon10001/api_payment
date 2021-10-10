@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use App\Jobs\ReconcilePaymentJob;
+use App\Jobs\UpdateTransactionsTableJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 
