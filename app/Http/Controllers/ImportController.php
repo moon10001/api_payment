@@ -11,7 +11,7 @@ use App\Jobs\ReconcilePaymentJob;
 use App\Jobs\UpdateTransactionsTableJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
-
+use Carbon\Carbon;
 
 class ImportController extends BaseController
 {
@@ -175,8 +175,9 @@ class ImportController extends BaseController
             (new ReconcilePaymentJob)
             ->chain([
               new UpdateTransactionsTableJob
-              ])
-          )->afterResponse();
+            ])
+            ->delay(Carbon::now()->addMinutes(1))
+          );
         } catch (Exception $e) {
           throw $e;
         }

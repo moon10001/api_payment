@@ -1,0 +1,1 @@
+[10-Oct-2021 22:01:40 Asia/Jakarta] PHP Fatal error:  Cannot redeclare App\Jobs\UpdateTransactionsTableJob::logJournal() in /home/kliksekolah/public_html/dev.api.payment/app/Jobs/UpdateTransactionsTableJob.php on line 235
