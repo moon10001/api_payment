@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class UpdateTransactionsTableJob extends Job
 {
@@ -155,6 +156,8 @@ class UpdateTransactionsTableJob extends Job
           'credit' => $detail['debit'],
           'units_id' => $journal['units_id'],
           'countable' => 1,
+          'created_at' => Carbon::now(),
+          'updated_at' => Carbon::now()
         ]);
       }
     }
@@ -170,6 +173,8 @@ class UpdateTransactionsTableJob extends Job
         'date' => $date,
         'is_posted' => 1,
         'is_credit' => true,
+        'created_at' => Carbon::now(),
+        'updated_at' => Carbon::now()
       ];
 
       $journalId = DB::connection('finance_db')->table('journals')
@@ -212,6 +217,8 @@ class UpdateTransactionsTableJob extends Job
         'is_posted' => 1,
         'is_credit' => $isCredit,
         'prm_school_units_id' => $isCredit ? $unitId : $this->destinationUnit,
+        'created_at' => Carbon::now(),
+        'updated_at' => Carbon::now()
       ];
       $journalId = DB::connection('finance_db')->table('journals')->insertGetId($journal);
 
