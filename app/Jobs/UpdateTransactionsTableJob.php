@@ -142,7 +142,7 @@ class UpdateTransactionsTableJob extends Job
         $code = $code.'K';
       }
 
-      $journalNumber = '$code'.$year.$month.str_pad($counter, 2, '0', STR_PAD_LEFT).$unitCode;
+      $journalNumber = $code.$year.$month.str_pad($counter, 2, '0', STR_PAD_LEFT).$unitCode;
       return $journalNumber;
     }
 
