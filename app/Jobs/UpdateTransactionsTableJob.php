@@ -196,6 +196,15 @@ class UpdateTransactionsTableJob extends Job
         ]);
       }
       DB::connection('finance_db')->table('journal_details')->insert($details);
+      DB::connection('finance_db')->table('entity_units')->insert([
+      	'entity_type' => 'App\Journals',
+      	'entity_id' => $journalId,
+      	'prm_school_units_id' => $unitId,
+      	'created_at' => Carbon::now(),
+      	'updated_at' => Carbon::now(),
+      ]);
+      
+      
       $this->logJournal($journalId, $journal, $details);
     }
 
@@ -203,7 +212,7 @@ class UpdateTransactionsTableJob extends Job
       $sum = $items->sum('nominal');
       $journal = [
         'journal_number' => $this->generateJournalNumber($date, $unitId, $isCredit),
-        'destination_unit_id' => $isCredit ? $this->destinationUnit : $unitId,
+        'destination_unit_id' => $isCredit ? $unitId : $this->destinationUnit,
         'units_id' => $unitId,
         'code_of_account' => $this->bankCoa,
         'date' => $date,
@@ -236,5 +245,13 @@ class UpdateTransactionsTableJob extends Job
 
       DB::connection('finance_db')->table('journal_details')->insert($details);
       $this->logJournal($journalId, $journal, $details);
+      DB::connection('finance_db')->table('entity_units')->insert([
+        'entity_type' => 'App\Journals',
+        'entity_id' => $journalId,
+        'prm_school_units_id' => $unitId,
+        'created_at' =>	Carbon::now(), 
+        'updated_at' =>	Carbon::now(),
+      ]);
+            	        	                      
     }
 }
