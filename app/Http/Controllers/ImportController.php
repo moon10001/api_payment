@@ -89,7 +89,7 @@ class ImportController extends BaseController
       $rowCount = 0;
       $response = [];
       $files = [];
-      DB::transaction(function() use($fileCount, $rowCount, $response, $files) {
+      DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
         try {
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
