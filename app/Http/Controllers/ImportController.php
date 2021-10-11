@@ -11,7 +11,7 @@ use App\Jobs\ReconcilePaymentJob;
 use App\Jobs\UpdateTransactionsTableJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
-
+use Carbon\Carbon;
 
 class ImportController extends BaseController
 {
@@ -87,8 +87,14 @@ class ImportController extends BaseController
     public function import() {
       DB::transaction(function() {
         try {
+          $fileCount = 0;
+          $rowCount = 0;
+          $response = [];
+          $files = [];
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
+            array_push($files, $filename);
+            $fileCount++;
             $data = [];
             foreach(explode(PHP_EOL, $file) as $line) {
               if (str_starts_with($line, ':86:UBP')) {
@@ -157,6 +163,8 @@ class ImportController extends BaseController
                 ]);
 
                 $this->insertMT940($data);
+                array_push($response, $data);
+                $rowCount++;
               }
               if (str_starts_with($line, ':61:')) {
                 $lineContent = substr($line, 4);
@@ -175,8 +183,14 @@ class ImportController extends BaseController
             (new ReconcilePaymentJob)
             ->chain([
               new UpdateTransactionsTableJob
-              ])
-          )->afterResponse();
+            ])->delay(Carbon::now()->addMinutes(1))
+          );
+          return response()->json([
+          	'processed_files' => $fileCount,
+          	'processed_rows' => $rowCount,
+          	'files' => $files,
+          	'data' => $response,
+          ]);
         } catch (Exception $e) {
           throw $e;
         }
