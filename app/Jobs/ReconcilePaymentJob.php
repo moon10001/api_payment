@@ -5,7 +5,7 @@ namespace App\Jobs;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Jobs\UpdateTransactionsTableJob;
-
+use Carbon\Carbon;
 
 class ReconcilePaymentJob extends Job
 {
@@ -62,6 +62,7 @@ class ReconcilePaymentJob extends Job
                 'payment_date' => $transaction->payment_date,
                 'prm_payments_id' => $transaction->id,
                 'nominal' => $transaction->nominal,
+                'updated_at' => Carbon::now(),
               ]);
             }
           }
