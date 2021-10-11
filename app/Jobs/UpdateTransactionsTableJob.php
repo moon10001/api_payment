@@ -106,7 +106,6 @@ class UpdateTransactionsTableJob extends Job
         }
       }
 
-	  var_dump($data);
       return $data;
     }
 
@@ -115,8 +114,8 @@ class UpdateTransactionsTableJob extends Job
       $unitCode = $unit->unit_code;
 
       $month = date('m', strtotime($date));
-      $year = date('y', strtotime($date));
-
+      $year = date('Y', strtotime($date));
+      
       $counter = str_pad(
       strval(
       DB::connection('finance_db')->table('journals')
@@ -154,14 +153,13 @@ class UpdateTransactionsTableJob extends Job
           'created_at' => Carbon::now(),
           'updated_at' => Carbon::now()
         ]);
-        var_dump($journalId, $journal, $details);
       }
     }
 
     private function createTransaction($unitId, $date, $items) {
       $journal = [
         'journal_number' => $this->generateJournalNumber($date, $unitId),
-        'units_id' => $unitId,
+        'prm_school_units_id' => $unitId,
         'journal_type' => 'BANK',
         'code_of_account' => $this->bankCoa,
         'form_type' => 1,
@@ -169,6 +167,7 @@ class UpdateTransactionsTableJob extends Job
         'date' => $date,
         'is_posted' => 1,
         'is_credit' => true,
+        'units_id' => $unitId,
         'created_at' => Carbon::now(),
         'updated_at' => Carbon::now()
       ];
@@ -204,6 +203,7 @@ class UpdateTransactionsTableJob extends Job
       $sum = $items->sum('nominal');
       $journal = [
         'journal_number' => $this->generateJournalNumber($date, $unitId, $isCredit),
+        'destination_unit_id' => $isCredit ? $this->destinationUnit : $unitId,
         'units_id' => $unitId,
         'code_of_account' => $this->bankCoa,
         'date' => $date,
@@ -212,7 +212,7 @@ class UpdateTransactionsTableJob extends Job
         'form_type' => 2,
         'is_posted' => 1,
         'is_credit' => $isCredit,
-        'prm_school_units_id' => $isCredit ? $unitId : $this->destinationUnit,
+        'prm_school_units_id' => $unitId,
         'created_at' => Carbon::now(),
         'updated_at' => Carbon::now()
       ];
