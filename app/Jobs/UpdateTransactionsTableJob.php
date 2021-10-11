@@ -75,8 +75,6 @@ class UpdateTransactionsTableJob extends Job
 
 
     public function getReconciliatedData() {
-      $from = isset($this->from) && !empty($this->from) ? $this->from : date('Y-m-d');
-      $to = isset($this->to) && !empty($this->to) ? $this->to : date('Y-m-d');
       $unitId = $this->unitId;
 
       $data = [];
@@ -90,14 +88,7 @@ class UpdateTransactionsTableJob extends Job
 
       foreach($unitsVA as $va) {
         $transactions = DB::table('daily_reconciled_reports')
-        ->where(function($q) use ($from, $to) {
-          if(isset($from) && !empty($from)) {
-            $q->where('payment_date', '>=', $from);
-          }
-          if(isset($to) && !empty($to)) {
-            $q->where('payment_date', '<=', $to);
-          }
-        })
+        ->whereRaw('DATE(created_at) = ?', date('Y-m-d'))
         ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
         ->where('units_id', $va->unit_id)
         ->orderBy('payment_date', 'ASC')
