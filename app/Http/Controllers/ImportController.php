@@ -85,12 +85,12 @@ class ImportController extends BaseController
     }
 
     public function import() {
+      $fileCount = 0;
+      $rowCount = 0;
+      $response = [];
+      $files = [];
       DB::transaction(function() {
         try {
-          $fileCount = 0;
-          $rowCount = 0;
-          $response = [];
-          $files = [];
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
             array_push($files, $filename);
@@ -103,7 +103,6 @@ class ImportController extends BaseController
                 $va = substr($lineContent, 17, 17);
                	$tempsId = substr($va, 0, 9);
                 $sum = 0;
-
 
                 if (!str_starts_with($periode, 4)) {
                   $fromMonth = substr($periode, 0, 2);
@@ -179,21 +178,23 @@ class ImportController extends BaseController
               }
             }
           }
-          $this->dispatch(
-            (new ReconcilePaymentJob)
-            ->chain([
-              new UpdateTransactionsTableJob
-            ])->delay(Carbon::now()->addMinutes(1))
-          );
-          return response()->json([
-          	'processed_files' => $fileCount,
-          	'processed_rows' => $rowCount,
-          	'files' => $files,
-          	'data' => $response,
-          ]);
+
+
         } catch (Exception $e) {
           throw $e;
         }
       });
+      $this->dispatch(
+        (new ReconcilePaymentJob)
+        ->chain([
+          new UpdateTransactionsTableJob
+        ])->delay(Carbon::now()->addMinutes(1))
+      );
+      return response()->json([
+        'processed_files' => $fileCount,
+        'processed_rows' => $rowCount,
+        'files' => $files,
+        'data' => $response,
+      ]);
     }
 }
