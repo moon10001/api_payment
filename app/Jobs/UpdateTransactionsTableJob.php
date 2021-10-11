@@ -64,7 +64,7 @@ class UpdateTransactionsTableJob extends Job
             foreach($transactions as $date => $items) {
               $this->createTransaction($unitId, $date, $items);
               $this->createReconciliation($unitId, $date, $items);
-              $this->createReconciliation($unitId, $date, $items, false);
+              $this->createReconciliation($this->destinationUnit, $date, $items, true);
             }
           }
         } catch (Exception $e) {
@@ -88,7 +88,7 @@ class UpdateTransactionsTableJob extends Job
 
       foreach($unitsVA as $va) {
         $transactions = DB::table('daily_reconciled_reports')
-        ->whereRaw('DATE(created_at) = ?', date('Y-m-d'))
+        ->whereRaw('DATE(daily_reconciled_reports.created_at) = ?', date('Y-m-d'))
         ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
         ->where('units_id', $va->unit_id)
         ->orderBy('payment_date', 'ASC')
@@ -106,6 +106,7 @@ class UpdateTransactionsTableJob extends Job
         }
       }
 
+	  var_dump($data);
       return $data;
     }
 
@@ -134,6 +135,7 @@ class UpdateTransactionsTableJob extends Job
       }
 
       $journalNumber = $code.$year.$month.str_pad($counter, 2, '0', STR_PAD_LEFT).$unitCode;
+      var_dump($journalNumber);
       return $journalNumber;
     }
 
@@ -152,6 +154,7 @@ class UpdateTransactionsTableJob extends Job
           'created_at' => Carbon::now(),
           'updated_at' => Carbon::now()
         ]);
+        var_dump($journalId, $journal, $details);
       }
     }
 
@@ -200,8 +203,8 @@ class UpdateTransactionsTableJob extends Job
     private function createReconciliation($unitId, $date, $items, $isCredit = false) {
       $sum = $items->sum('nominal');
       $journal = [
-        'journal_number' => $this->generateJournalNumber($date, $unitId, false),
-        'units_id' => $isCredit ? $this->destinationUnit : $unitId,
+        'journal_number' => $this->generateJournalNumber($date, $unitId, $isCredit),
+        'units_id' => $unitId,
         'code_of_account' => $this->bankCoa,
         'date' => $date,
         'journal_type' => 'BANK',
