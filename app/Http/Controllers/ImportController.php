@@ -83,6 +83,15 @@ class ImportController extends BaseController
         'updated_at' => date('Y-m-d h:i:s')
       ]);
     }
+    
+    private function fileHasBeenImported($filename) {
+    	$res = DB::table('mt940_import_log')
+    	->where('filename', $filename)
+    	->where('status', 'PROCESSED')
+    	->get();
+    	
+    	return $res->count() >= 1;
+    }
 
     public function import() {
       $fileCount = 0;
@@ -93,6 +102,9 @@ class ImportController extends BaseController
         try {
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
+            if ($this->fileHasBeenImported($filename)) {
+            	continue;
+            }
             array_push($files, $filename);
             $fileCount++;
             $data = [];
@@ -177,10 +189,22 @@ class ImportController extends BaseController
                 ];
               }
             }
+            DB::table('mt940_import_log')->insert([
+              'filename' => $filename,
+              'processed_at' => Carbon::now(),
+              'status' => 'PROCESSED',
+            ]);
           }
-
-
         } catch (Exception $e) {
+          DB::table('mt940_import_log')
+          ->updateOrInsert([
+          	'filename' => $filename
+          ], [
+          	'filename' => $filename,
+          	'processed_at' => Carbon::now(),
+          	'status' => 'FAILED',
+          	'error_log' => $e->getMessage(),
+          ]);
           throw $e;
         }
       });
