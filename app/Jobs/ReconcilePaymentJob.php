@@ -9,7 +9,11 @@ use Carbon\Carbon;
 
 class ReconcilePaymentJob extends Job
 {
-    public function __construct() {}
+    protected $invoicesIds = [];
+
+    public function __construct($invoicesIds) {
+      $this->invoicesIds = $invoicesIds;
+    }
     /**
      * Execute the job.
      *
@@ -34,7 +38,15 @@ class ReconcilePaymentJob extends Job
             'SUM(tr_payment_details.nominal) as nominal'
           )
         )
-        ->join('tr_invoices', 'tr_invoices.temps_id', 'mt940.temps_id')
+        ->join('tr_invoices', function($join) use($invoicesIds) {
+          $join->on('tr_invoices.temps_id', 'mt940.temps_id');
+          if (!empty($invoicesIds)) {
+            $join->on('tr_invoices.id', 'in', $invoicesIds);
+          } else {
+            $join->on('tr_invoices.id', '=', DB::raw('CONCAT("INV-", mt940.temps_id, DATE_FORMAT(mt940.periode_from, "%y%m"))'));
+            $join->orOn('tr_invoices.id', 'like', DB::raw('CONCAT("%-", mt940.temps_id, mt940.periode_from)'));
+          }
+        })
         ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
         ->whereRaw('DATE(mt940.created_at) = ?', $date)
@@ -53,11 +65,7 @@ class ReconcilePaymentJob extends Job
 
           if ($filteredTransactions->isNotEmpty()) {
             foreach($filteredTransactions as $transaction) {
-              DB::table('daily_reconciled_reports')->updateOrInsert([
-                'units_id' => $va->unit_id,
-                'payment_date' => $transaction->payment_date,
-                'prm_payments_id' => $transaction->id,
-              ],[
+              DB::table('daily_reconciled_reports')->insert([
                 'units_id' => $va->unit_id,
                 'payment_date' => $transaction->payment_date,
                 'prm_payments_id' => $transaction->id,

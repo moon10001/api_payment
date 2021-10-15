@@ -83,13 +83,13 @@ class ImportController extends BaseController
         'updated_at' => date('Y-m-d h:i:s')
       ]);
     }
-    
+
     private function fileHasBeenImported($filename) {
     	$res = DB::table('mt940_import_log')
     	->where('filename', $filename)
     	->where('status', 'PROCESSED')
     	->get();
-    	
+
     	return $res->count() >= 1;
     }
 
@@ -100,6 +100,7 @@ class ImportController extends BaseController
       $files = [];
       DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
         try {
+          $invoicesIds = [];
           foreach(Storage::disk('mt940')->files('/') as $filename) {
             $file = Storage::disk('mt940')->get($filename);
             if ($this->fileHasBeenImported($filename)) {
@@ -135,6 +136,7 @@ class ImportController extends BaseController
                   $periode_to = $term;
                   $periode_from = $term;
                 }
+                array_push($invoicesIds, $id);
 
                 $data = array_merge($data, [
                   'va' => $va,
@@ -189,6 +191,12 @@ class ImportController extends BaseController
                 ];
               }
             }
+            $this->dispatch(
+              (new ReconcilePaymentJob($invoicesIds))
+              ->chain([
+                new UpdateTransactionsTableJob
+              ])->delay(Carbon::now()->addMinutes(1))
+            );
             DB::table('mt940_import_log')->insert([
               'filename' => $filename,
               'processed_at' => Carbon::now(),
@@ -208,12 +216,7 @@ class ImportController extends BaseController
           throw $e;
         }
       });
-      $this->dispatch(
-        (new ReconcilePaymentJob)
-        ->chain([
-          new UpdateTransactionsTableJob
-        ])->delay(Carbon::now()->addMinutes(1))
-      );
+
       return response()->json([
         'processed_files' => $fileCount,
         'processed_rows' => $rowCount,
