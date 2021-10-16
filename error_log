@@ -1,2 +1,3 @@
 [10-Oct-2021 22:01:40 Asia/Jakarta] PHP Fatal error:  Cannot redeclare App\Jobs\UpdateTransactionsTableJob::logJournal() in /home/kliksekolah/public_html/dev.api.payment/app/Jobs/UpdateTransactionsTableJob.php on line 235
 [12-Oct-2021 00:28:14 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Processors/Processor.php on line 16
+[16-Oct-2021 00:12:15 Asia/Jakarta] PHP Fatal error:  Cannot use $this as lexical variable in /home/kliksekolah/public_html/api.payment/app/Jobs/ReconcilePaymentJob.php on line 41

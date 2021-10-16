@@ -27,38 +27,38 @@ class ReconcilePaymentJob extends Job
           $res = DB::table('prm_va')->get();
           return $res;
         });
-
+        
+	    DB::enableQueryLog();
         $transactions = DB::table('mt940')
         ->select(
           'mt940.payment_date',
-          'prm_payments.name',
           'prm_payments.id',
-          'mt940.va',
+          'prm_va.unit_id',
           DB::raw(
             'SUM(tr_payment_details.nominal) as nominal'
-          )
+          ),
+          DB::raw('NOW()'),
+          DB::raw('NOW()')
         )
-        ->join('tr_invoices', function($join) use($invoicesIds) {
-          $join->on('tr_invoices.temps_id', 'mt940.temps_id');
-          if (!empty($invoicesIds)) {
-            $join->on('tr_invoices.id', 'in', $invoicesIds);
-          } else {
-            $join->on('tr_invoices.id', '=', DB::raw('CONCAT("INV-", mt940.temps_id, DATE_FORMAT(mt940.periode_from, "%y%m"))'));
-            $join->orOn('tr_invoices.id', 'like', DB::raw('CONCAT("%-", mt940.temps_id, mt940.periode_from)'));
-          }
+        ->join('prm_va', function($join) {
+          $join->on('mt940.va', 'like', DB::raw('CONCAT(prm_va.va_code, "%")')); 
         })
-        ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
+	    ->join('tr_payment_details', function($join) {
+          $join->on('tr_payment_details.invoices_id', '=', DB::raw('CONCAT("INV-", mt940.temps_id, DATE_FORMAT(STR_TO_DATE(mt940.periode_from, "%m%y"), "%y%m"))'));
+       	})
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
         ->whereRaw('DATE(mt940.created_at) = ?', $date)
-        ->groupBy('mt940.va', 'mt940.payment_date', 'prm_payments.name', 'prm_payments.id')
-        ->orderBy('mt940.payment_date', 'ASC')
-        ->get();
-
+        ->groupBy('prm_va.va_code', 'mt940.payment_date', 'prm_payments.id')
+        ->orderBy('mt940.payment_date', 'ASC');
+        
+        DB::table('daily_reconciled_reports')->insertUsing([
+        	'payment_date', 'prm_payments_id', 'units_id', 'nominal', 'created_at', 'updated_at'
+        ], $transactions);
+        /*
         foreach($unitsVA as $va) {
           if (empty($va->va_code)) {
             continue;
           }
-
           $filteredTransactions = $transactions->filter(function($transaction) use ($va) {
             return str_starts_with($transaction->va, $va->va_code);
           });
@@ -74,7 +74,8 @@ class ReconcilePaymentJob extends Job
               ]);
             }
           }
-        }
+          var_dump($va->va_code, $filteredTransactions);
+        }*/
       } catch (Exception $e) {
         throw $e;
       }

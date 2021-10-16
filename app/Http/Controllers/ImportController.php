@@ -191,12 +191,7 @@ class ImportController extends BaseController
                 ];
               }
             }
-            $this->dispatch(
-              (new ReconcilePaymentJob($invoicesIds))
-              ->chain([
-                new UpdateTransactionsTableJob
-              ])->delay(Carbon::now()->addMinutes(1))
-            );
+
             DB::table('mt940_import_log')->insert([
               'filename' => $filename,
               'processed_at' => Carbon::now(),
@@ -216,6 +211,12 @@ class ImportController extends BaseController
           throw $e;
         }
       });
+      $this->dispatch(
+       (new ReconcilePaymentJob([]))
+       ->chain([
+         new UpdateTransactionsTableJob
+       ])->delay(Carbon::now()->addMinutes(1))
+      );
 
       return response()->json([
         'processed_files' => $fileCount,
