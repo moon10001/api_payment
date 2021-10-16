@@ -113,29 +113,20 @@ class UpdateTransactionsTableJob extends Job
       $unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
       $unitCode = $unit->unit_code;
 
-      $month = date('m', strtotime($date));
-      $year = date('Y', strtotime($date));
-      
-      $counter = str_pad(
-      strval(
-      DB::connection('finance_db')->table('journals')
-      ->where('journal_type', 'BANK')
-      ->where('is_credit', $isCredit)
-      ->whereRaw('MONTH(date) = ?', $month)
-      ->whereRaw('YEAR(date) = ?', $year)
-      ->where('units_id', $unitId)
-      ->get()->count() + 1), 3,'0',STR_PAD_LEFT);
+      $journalNumber = DB::connection('finance_db')->table('journals')
+      ->select(
+        DB::raw('
+          CONCAT("BBM21", LPAD(MONTH(NOW()), 2, 0), LPAD(COUNT(journals.id)+1, 3, 0), prm_school_units.unit_code ) as journal_number
+        ')
+      )
+      ->join('prm_school_units', 'journals.prm_school_units_id', 'prm_school_units.id')
+      ->whereRaw('MONTH(date) = ?', '=', $month)
+      ->whereRaw('YEAR(date) = ?', '=', $year)
+      ->where('journal_number', 'like', $isCredit ? 'BBM' : 'BBK')
+      ->where('journals.prm_school_units_id', $unitId)
+      ->get();
 
-      $code = 'BB';
-      if($isCredit) {
-        $code = $code.'M';
-      } else {
-        $code = $code.'K';
-      }
-
-      $journalNumber = $code.$year.$month.str_pad($counter, 2, '0', STR_PAD_LEFT).$unitCode;
-      var_dump($journalNumber);
-      return $journalNumber;
+      var_dump($journal_number);
     }
 
     private function logJournal($journalId, $journal, $details) {
@@ -203,8 +194,8 @@ class UpdateTransactionsTableJob extends Job
       	'created_at' => Carbon::now(),
       	'updated_at' => Carbon::now(),
       ]);
-      
-      
+
+
       $this->logJournal($journalId, $journal, $details);
     }
 
@@ -249,9 +240,9 @@ class UpdateTransactionsTableJob extends Job
         'entity_type' => 'App\Journals',
         'entity_id' => $journalId,
         'prm_school_units_id' => $unitId,
-        'created_at' =>	Carbon::now(), 
+        'created_at' =>	Carbon::now(),
         'updated_at' =>	Carbon::now(),
       ]);
-            	        	                      
+
     }
 }
