@@ -11,7 +11,7 @@ class UpdateTransactionsTableJob extends Job
     private $from;
     private $to;
     private $unitId;
-    private $bankCoa = '11201';
+    private $bankCoa = '11301';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
     private $paymentCoa = [
@@ -88,7 +88,7 @@ class UpdateTransactionsTableJob extends Job
 
       foreach($unitsVA as $va) {
         $transactions = DB::table('daily_reconciled_reports')
-        ->whereRaw('DATE(daily_reconciled_reports.created_at) = ?', date('Y-m-d'))
+        ->whereRaw('DATE(daily_reconciled_reports.created_at) > ?', '2021-10-16')
         ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
         ->where('units_id', $va->unit_id)
         ->orderBy('payment_date', 'ASC')
@@ -109,24 +109,39 @@ class UpdateTransactionsTableJob extends Job
       return $data;
     }
 
-    private function generateJournalNumber($date, $unitId, $isCredit = true) {
-      $unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
-      $unitCode = $unit->unit_code;
+    public function generateJournalNumber($date, $unitId, $isCredit = true) {
+	  $month = date('m', strtotime($date));
+	  $year = date('Y', strtotime($date));
+	  $shortYear = date('y', strtotime($date));
 
       $journalNumber = DB::connection('finance_db')->table('journals')
       ->select(
         DB::raw('
-          CONCAT("BBM21", LPAD(MONTH(NOW()), 2, 0), LPAD(COUNT(journals.id)+1, 3, 0), prm_school_units.unit_code ) as journal_number
+          CONCAT(?, DATE_FORMAT(date, "%y"), LPAD(MONTH(date), 2, 0), LPAD(IFNULL(COUNT(journals.id)+1, 1), 3, 0), prm_school_units.unit_code ) as jn
         ')
       )
-      ->join('prm_school_units', 'journals.prm_school_units_id', 'prm_school_units.id')
-      ->whereRaw('MONTH(date) = ?', '=', $month)
-      ->whereRaw('YEAR(date) = ?', '=', $year)
-      ->where('journal_number', 'like', $isCredit ? 'BBM' : 'BBK')
-      ->where('journals.prm_school_units_id', $unitId)
-      ->get();
-
-      var_dump($journal_number);
+      ->join('prm_school_units', 'journals.units_id', 'prm_school_units.id')
+      ->whereRaw('MONTH(date) = ?')
+      ->whereRaw('YEAR(date) = ?')
+      ->whereRaw('journal_number like ? ')
+      ->whereRaw('journals.units_id = ?')
+      ->distinct()
+      ->setBindings([$isCredit ? 'BBM' : 'BBK', $month, $year, $isCredit ? 'BBM%' : 'BBK%', $unitId])
+      ->first();
+      
+      
+      if (!$journalNumber || empty($journalNumber) || $journalNumber->jn == null) {
+      	$journalNumber = 'BBM';
+      	if (!$isCredit) {
+      		$journalNumber = 'BBK';
+      	}
+      	$unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
+      	$journalNumber = $journalNumber . $shortYear . str_pad($month, 2, '0', STR_PAD_LEFT) . '001' . $unit->unit_code;
+      	return $journalNumber; 
+      }
+      
+      var_dump($journalNumber);
+      return $journalNumber->jn;
     }
 
     private function logJournal($journalId, $journal, $details) {
@@ -150,7 +165,7 @@ class UpdateTransactionsTableJob extends Job
     private function createTransaction($unitId, $date, $items) {
       $journal = [
         'journal_number' => $this->generateJournalNumber($date, $unitId),
-        'prm_school_units_id' => $unitId,
+        'prm_school_units_id' => null,
         'journal_type' => 'BANK',
         'code_of_account' => $this->bankCoa,
         'form_type' => 1,
@@ -158,6 +173,8 @@ class UpdateTransactionsTableJob extends Job
         'date' => $date,
         'is_posted' => 1,
         'is_credit' => true,
+        'accepted_by' => 'SYSTEM',
+        'submitted_by' => 'SYSTEM',
         'units_id' => $unitId,
         'created_at' => Carbon::now(),
         'updated_at' => Carbon::now()
@@ -212,7 +229,9 @@ class UpdateTransactionsTableJob extends Job
         'form_type' => 2,
         'is_posted' => 1,
         'is_credit' => $isCredit,
-        'prm_school_units_id' => $unitId,
+        'accepted_by' => 'SYSTEM',
+        'submitted_by' => 'SYSTEM',
+        'prm_school_units_id' => $isCredit ? $this->destinationUnit : $unitId,
         'created_at' => Carbon::now(),
         'updated_at' => Carbon::now()
       ];
