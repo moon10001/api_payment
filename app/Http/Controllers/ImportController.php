@@ -132,6 +132,8 @@ class ImportController extends BaseController
                   $id = 'UPP-' . $tempsId . $term;
                   if(str_starts_with($periode, '41101')) {
                     $id = 'DPP-' . $tempsId . $term;
+                  }else if(str_starts_with($periode, '42101')) {
+                    $id = 'UPD-' . $tempsId . $term;
                   }
                   $periode_to = $term;
                   $periode_from = $term;
