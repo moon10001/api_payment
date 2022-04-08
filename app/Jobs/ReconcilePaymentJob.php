@@ -23,13 +23,13 @@ class ReconcilePaymentJob extends Job
     {
       try {
         //$date = date("Y-m-d");
-        $date = date("2021-12-05");
+        $date = date('Y-m-d', strtotime('2021-12-01'));
         $unitsVA = Cache::get('prm_va', function() {
-          $res = DB::table('prm_va')->get();
+          $res = DB::table('prm_va')->where('va_code', '<>', '""')->get();
           return $res;
         });
-
-	    DB::enableQueryLog();
+        DB::enableQueryLog();
+        var_dump($date);
         $transactions = DB::table('mt940')
         ->select(
           'mt940.payment_date',
@@ -41,29 +41,31 @@ class ReconcilePaymentJob extends Job
           DB::raw('NOW()'),
           DB::raw('NOW()')
         )
-        ->join('prm_va', function($join) {
-          $join->on('mt940.va', 'like', DB::raw('CONCAT(prm_va.va_code, "%")'));
+        ->join('tr_invoices', function($join) {
+          $join->on('tr_invoices.temps_id','=','mt940.temps_id');
+          $join->on('tr_invoices.periode_date', '>=', 'mt940.periode_date_from');
+          $join->on('tr_invoices.periode_date', '<=', 'mt940.periode_date_to');
         })
-	    ->join('tr_payment_details', function($join) {
-          $join->on('tr_payment_details.invoices_id', '=', DB::raw('CONCAT("INV-", mt940.temps_id, DATE_FORMAT(STR_TO_DATE(mt940.periode_from, "%m%y"), "%y%m"))'));
-       	})
+        ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-        ->whereRaw('(tr_payment_details.periode = CAST(periode_from as UNSIGNED) OR tr_payment_details.periode = CAST(periode_to as UNSIGNED))')
         ->whereRaw('DATE(mt940.created_at) = ?', $date)
         ->groupBy('mt940.payment_date', 'mt940.va', 'prm_payments.name', 'prm_payments.id')
         ->orderBy('mt940.payment_date', 'ASC')
         ->orderBy('mt940.va', 'ASC')
         ->orderBy('tr_payment_details.periode', 'ASC')
         ->get();
-
+        var_dump($transactions->count());
+        //var_dump(DB::getQueryLog());
         foreach($unitsVA as $va) {
+          //var_dump($va);
           if (empty($va->va_code)) {
             continue;
           }
           $filteredTransactions = $transactions->filter(function($transaction) use ($va) {
+            var_dump($va->va_code, $transaction);
             return str_starts_with($transaction->va, $va->va_code);
           });
-
+          //var_dump($filteredTransactions);
           if ($filteredTransactions->isNotEmpty()) {
             foreach($filteredTransactions as $transaction) {
               DB::table('daily_reconciled_reports')->insert([
@@ -74,6 +76,7 @@ class ReconcilePaymentJob extends Job
                 'updated_at' => Carbon::now(),
               ]);
             }
+            //var_dump(DB::getQueryLog());
           }
           var_dump($va->va_code, $filteredTransactions);
         }*/
