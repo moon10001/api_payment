@@ -218,7 +218,6 @@ class ImportController extends BaseController
        ->chain([
          new UpdateTransactionsTableJob
        ])->delay(Carbon::now()->addMinutes(1))
-      );
 */
       return response()->json([
         'processed_files' => $fileCount,
