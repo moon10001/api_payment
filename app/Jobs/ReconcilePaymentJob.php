@@ -28,8 +28,8 @@ class ReconcilePaymentJob extends Job
           $res = DB::table('prm_va')->where('va_code', '<>', '""')->get();
           return $res;
         });
-        DB::enableQueryLog();
-        var_dump($date);
+        
+	    DB::enableQueryLog();
         $transactions = DB::table('mt940')
         ->select(
           'mt940.payment_date',
@@ -54,8 +54,7 @@ class ReconcilePaymentJob extends Job
         ->orderBy('mt940.va', 'ASC')
         ->orderBy('tr_payment_details.periode', 'ASC')
         ->get();
-        var_dump($transactions->count());
-        //var_dump(DB::getQueryLog());
+
         foreach($unitsVA as $va) {
           //var_dump($va);
           if (empty($va->va_code)) {

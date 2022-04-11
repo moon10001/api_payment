@@ -1,0 +1,69 @@
+[10-Oct-2021 22:01:40 Asia/Jakarta] PHP Fatal error:  Cannot redeclare App\Jobs\UpdateTransactionsTableJob::logJournal() in /home/kliksekolah/public_html/dev.api.payment/app/Jobs/UpdateTransactionsTableJob.php on line 235
+[12-Oct-2021 00:28:14 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Processors/Processor.php on line 16
+<<<<<<< HEAD
+[13-Oct-2021 01:06:40 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/DatabaseTransactionRecord.php on line 37
+[14-Oct-2021 01:04:27 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Events/QueryExecuted.php on line 53
+[16-Oct-2021 01:07:50 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 855
+[17-Oct-2021 01:13:17 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 359
+[18-Oct-2021 00:47:31 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/Collection.php on line 515
+[19-Oct-2021 01:06:15 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/Traits/EnumeratesValues.php on line 972
+[20-Oct-2021 01:05:08 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/Arr.php on line 225
+[21-Oct-2021 00:47:09 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/phpoption/phpoption/src/PhpOption/Some.php on line 102
+[22-Oct-2021 01:16:24 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/Traits/Date.php on line 2572
+[23-Oct-2021 01:07:13 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 366
+[24-Oct-2021 00:48:45 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/filesystem/Filesystem.php on line 82
+[25-Oct-2021 01:00:57 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 359
+[26-Oct-2021 01:08:35 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/Traits/Date.php on line 2572
+[27-Oct-2021 01:09:37 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/CarbonTimeZone.php on line 23
+[28-Oct-2021 01:33:39 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/Collection.php on line 30
+[29-Oct-2021 02:19:30 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php on line 59
+[31-Oct-2021 00:49:21 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/Collection.php on line 636
+[01-Nov-2021 00:41:58 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 1118
+[02-Nov-2021 01:38:04 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Grammars/MySqlGrammar.php on line 277
+[03-Nov-2021 01:10:52 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php on line 86
+[04-Nov-2021 00:56:48 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Concerns/ManagesTransactions.php on line 139
+[05-Nov-2021 01:06:04 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/events/Dispatcher.php on line 335
+[06-Nov-2021 01:52:55 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Grammars/Grammar.php on line 1275
+[07-Nov-2021 00:46:24 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Grammars/Grammar.php on line 87
+[08-Nov-2021 00:32:12 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 359
+[09-Nov-2021 01:44:32 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/events/Dispatcher.php on line 233
+[10-Nov-2021 01:49:48 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/phpoption/phpoption/src/PhpOption/Some.php on line 118
+[11-Nov-2021 01:58:02 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php on line 97
+[12-Nov-2021 01:06:26 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Builder.php on line 1088
+[13-Nov-2021 01:14:42 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Concerns/ManagesTransactions.php on line 48
+[14-Nov-2021 01:30:29 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/symfony/polyfill-php80/Php80.php on line 93
+[15-Nov-2021 00:36:51 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/support/Env.php on line 93
+[16-Nov-2021 01:21:26 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/queue/Worker.php on line 665
+[17-Nov-2021 01:42:26 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/HigherOrderCollectionProxy.php on line 0
+[18-Nov-2021 01:32:00 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/filesystem/Filesystem.php on line 70
+[19-Nov-2021 01:12:09 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 366
+[20-Nov-2021 01:21:38 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/queue/DatabaseQueue.php on line 237
+[21-Nov-2021 00:41:52 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php on line 71
+[22-Nov-2021 01:24:15 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 366
+[23-Nov-2021 01:15:49 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Concerns/ManagesTransactions.php on line 48
+[24-Nov-2021 01:48:39 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 877
+[25-Nov-2021 01:30:36 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Grammars/Grammar.php on line 153
+[26-Nov-2021 01:30:54 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/filesystem/Filesystem.php on line 70
+[27-Nov-2021 01:10:15 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Builder.php on line 693
+[28-Nov-2021 01:31:33 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 359
+=======
+[16-Oct-2021 00:12:15 Asia/Jakarta] PHP Fatal error:  Cannot use $this as lexical variable in /home/kliksekolah/public_html/api.payment/app/Jobs/ReconcilePaymentJob.php on line 41
+[05-Apr-2022 09:28:01 UTC] PHP Fatal error:  Uncaught Error: Class 'ComposerAutoloaderInit2c4a251e770e7674945abc41f088b4f9' not found in /home/kliksekolah/public_html/dev.api.payment/vendor/autoload.php:7
+Stack trace:
+#0 /home/kliksekolah/public_html/dev.api.payment/bootstrap/app.php(3): require_once()
+#1 /home/kliksekolah/public_html/dev.api.payment/artisan(18): require('/home/kliksekol...')
+#2 {main}
+  thrown in /home/kliksekolah/public_html/dev.api.payment/vendor/autoload.php on line 7
+[05-Apr-2022 09:29:01 UTC] PHP Fatal error:  Uncaught Error: Class 'ComposerAutoloaderInit2c4a251e770e7674945abc41f088b4f9' not found in /home/kliksekolah/public_html/dev.api.payment/vendor/autoload.php:7
+Stack trace:
+#0 /home/kliksekolah/public_html/dev.api.payment/bootstrap/app.php(3): require_once()
+#1 /home/kliksekolah/public_html/dev.api.payment/artisan(18): require('/home/kliksekol...')
+#2 {main}
+  thrown in /home/kliksekolah/public_html/dev.api.payment/vendor/autoload.php on line 7
+[05-Apr-2022 19:58:57 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/collections/Arr.php on line 702
+[06-Apr-2022 20:09:08 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/filesystem/Filesystem.php on line 70
+[07-Apr-2022 19:41:18 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/filesystem/Filesystem.php on line 70
+[08-Apr-2022 19:36:19 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/nesbot/carbon/src/Carbon/CarbonTimeZone.php on line 23
+[09-Apr-2022 19:39:10 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Query/Grammars/Grammar.php on line 1275
+[10-Apr-2022 19:41:14 Asia/Jakarta] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/kliksekolah/public_html/dev.api.payment/vendor/illuminate/database/Connection.php on line 366
+>>>>>>> c25650b (Fixing bugs)
