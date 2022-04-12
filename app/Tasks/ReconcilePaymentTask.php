@@ -23,19 +23,26 @@ class ReconcilePaymentTask {
         $transactions = DB::table('mt940')
         ->select(
           'mt940.payment_date',
-          'prm_payments.name',
+          'mt940.va',
           'prm_payments.id',
           DB::raw(
             'SUM(tr_payment_details.nominal) as nominal'
-          )
+          ),
+          DB::raw('NOW()'),
+          DB::raw('NOW()')
         )
-        ->join('tr_invoices', 'tr_invoices.temps_id', 'mt940.temps_id')
+        ->join('tr_invoices', function($join) {
+          $join->on('tr_invoices.temps_id','=','mt940.temps_id');
+          $join->on('tr_invoices.periode_date', '>=', 'mt940.periode_date_from');
+          $join->on('tr_invoices.periode_date', '<=', 'mt940.periode_date_to');
+        })
         ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-        ->where('mt940.payment_date', $date)
-        ->where('mt940.va', 'LIKE', $va->va_code.'%')
-        ->groupBy('mt940.payment_date', 'prm_payments.name', 'prm_payments.id')
+        ->whereRaw('DATE(mt940.created_at) = ?', $date)
+        ->groupBy('mt940.payment_date', 'mt940.va', 'prm_payments.id')
         ->orderBy('mt940.payment_date', 'ASC')
+        ->orderBy('mt940.va', 'ASC')
+        ->orderBy('tr_payment_details.periode', 'ASC')
         ->get();
 
         if ($transactions->isNotEmpty()) {
