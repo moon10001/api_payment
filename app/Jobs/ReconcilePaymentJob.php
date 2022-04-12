@@ -11,8 +11,7 @@ class ReconcilePaymentJob extends Job
 {
     protected $invoicesIds = [];
 
-    public function __construct($invoicesIds) {
-      $this->invoicesIds = $invoicesIds;
+    public function __construct() {
     }
     /**
      * Execute the job.
@@ -28,13 +27,13 @@ class ReconcilePaymentJob extends Job
           $res = DB::table('prm_va')->where('va_code', '<>', '""')->get();
           return $res;
         });
-        
+
 	    DB::enableQueryLog();
         $transactions = DB::table('mt940')
         ->select(
           'mt940.payment_date',
+          'mt940.va',
           'prm_payments.id',
-          'prm_va.unit_id',
           DB::raw(
             'SUM(tr_payment_details.nominal) as nominal'
           ),
@@ -49,22 +48,19 @@ class ReconcilePaymentJob extends Job
         ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
         ->whereRaw('DATE(mt940.created_at) = ?', $date)
-        ->groupBy('mt940.payment_date', 'mt940.va', 'prm_payments.name', 'prm_payments.id')
+        ->groupBy('mt940.payment_date', 'mt940.va', 'prm_payments.id')
         ->orderBy('mt940.payment_date', 'ASC')
         ->orderBy('mt940.va', 'ASC')
         ->orderBy('tr_payment_details.periode', 'ASC')
         ->get();
 
         foreach($unitsVA as $va) {
-          //var_dump($va);
           if (empty($va->va_code)) {
             continue;
           }
           $filteredTransactions = $transactions->filter(function($transaction) use ($va) {
-            var_dump($va->va_code, $transaction);
             return str_starts_with($transaction->va, $va->va_code);
           });
-          //var_dump($filteredTransactions);
           if ($filteredTransactions->isNotEmpty()) {
             foreach($filteredTransactions as $transaction) {
               DB::table('daily_reconciled_reports')->insert([

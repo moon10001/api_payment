@@ -213,12 +213,12 @@ class ImportController extends BaseController
           throw $e;
         }
       });
-/*      $this->dispatch(
+      $this->dispatch(
        (new ReconcilePaymentJob([]))
        ->chain([
          new UpdateTransactionsTableJob
        ])->delay(Carbon::now()->addMinutes(1))
-*/
+      );
       return response()->json([
         'processed_files' => $fileCount,
         'processed_rows' => $rowCount,
