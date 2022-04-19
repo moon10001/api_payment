@@ -214,7 +214,7 @@ class ImportController extends BaseController
         }
       });
       $this->dispatch(
-       (new ReconcilePaymentJob([]))
+       (new ReconcilePaymentJob)
        ->chain([
          new UpdateTransactionsTableJob
        ])->delay(Carbon::now()->addMinutes(1))

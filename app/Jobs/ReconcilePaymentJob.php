@@ -10,8 +10,14 @@ use Carbon\Carbon;
 class ReconcilePaymentJob extends Job
 {
     protected $invoicesIds = [];
+    protected $date;
 
-    public function __construct() {
+    public function __construct($date = '') {
+      if ($date != '') {
+        $this->date = $date;
+      } else {
+        $this->date = date('Y-m-d');
+      }
     }
     /**
      * Execute the job.
@@ -22,7 +28,6 @@ class ReconcilePaymentJob extends Job
     {
       try {
         //$date = date("Y-m-d");
-        $date = date('Y-m-d', strtotime('2021-12-01'));
         $unitsVA = Cache::get('prm_va', function() {
           $res = DB::table('prm_va')->where('va_code', '<>', '""')->get();
           return $res;
@@ -31,7 +36,7 @@ class ReconcilePaymentJob extends Job
 	    DB::enableQueryLog();
         $transactions = DB::table('mt940')
         ->select(
-          'mt940.payment_date',
+          'mt940.created_at',
           'mt940.va',
           'prm_payments.id',
           DB::raw(
@@ -47,9 +52,9 @@ class ReconcilePaymentJob extends Job
         })
         ->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
         ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-        ->whereRaw('DATE(mt940.created_at) = ?', $date)
-        ->groupBy('mt940.payment_date', 'mt940.va', 'prm_payments.id')
-        ->orderBy('mt940.payment_date', 'ASC')
+        ->whereRaw('DATE(mt940.created_at) = ?', $this->date)
+        ->groupBy('mt940.created_at', 'mt940.va', 'prm_payments.id')
+        ->orderBy('mt940.created_at', 'ASC')
         ->orderBy('mt940.va', 'ASC')
         ->orderBy('tr_payment_details.periode', 'ASC')
         ->get();
@@ -65,7 +70,7 @@ class ReconcilePaymentJob extends Job
             foreach($filteredTransactions as $transaction) {
               DB::table('daily_reconciled_reports')->insert([
                 'units_id' => $va->unit_id,
-                'payment_date' => $transaction->payment_date,
+                'payment_date' => $transaction->created_at,
                 'prm_payments_id' => $transaction->id,
                 'nominal' => $transaction->nominal,
                 'updated_at' => Carbon::now(),
