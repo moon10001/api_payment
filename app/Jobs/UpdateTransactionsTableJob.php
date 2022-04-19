@@ -121,7 +121,7 @@ class UpdateTransactionsTableJob extends Job
       $shortYear = date('y', strtotime($date));
       $unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
 
-      $counter = DB::connection('finance_db')->table('journal_h2h')
+      $counter = DB::connection('finance_db')->table('journal_logs')
       ->select('id')
       ->whereRaw('MONTH(journal_date) = ?', $date)
       ->whereRaw('YEAR(journal_date) = ?', $date)
@@ -135,20 +135,20 @@ class UpdateTransactionsTableJob extends Job
       return $journalNumber;
     }
 
-    private function logJournal($journalId, $journal, $details) {
+    private function logJournal($data) {
       foreach($details as $detail) {
         DB::connection('finance_db')->table('journal_logs')->insert([
-          'journals_id' => $journalId,
-          'journal_number' => $journal['journal_number'],
-          'date' => $journal['date'],
-          'code_of_account' => $detail['code_of_account'],
-          'description' => $detail['description'],
-          'debit' => $detail['credit'],
-          'credit' => $detail['debit'],
-          'units_id' => $journal['units_id'],
+          'journals_id' => $data['journal_id'],
+          'journal_number' => $data['journal_number'],
+          'date' => $data['date'],
+          'code_of_account' => $data['code_of_account'],
+          'description' => $data['description'],
+          'debit' => $data['credit'],
+          'credit' => $data['debit'],
+          'units_id' => $data['units_id'],
           'countable' => 1,
-          'created_at' => Carbon::now(),
-          'updated_at' => Carbon::now()
+          'created_at' => $data['created_at'],
+          'updated_at' => $data['updated_at']
         ]);
       }
     }
@@ -182,51 +182,68 @@ class UpdateTransactionsTableJob extends Job
     }
 
     private function createReconciliation($unitId, $date, $items) {
+      //Units
+      // 12902
+      //      coa
       $sum = $items->sum('nominal');
-      $journal = [
-        'journal_number' => $this->generateJournalNumber($date, $unitId),
-        'destination_unit_id' => $unitId,
-        'units_id' => $unitId,
-        'code_of_account' => $this->bankCoa,
+      $timestamp = Carbon::now();
+      $journalNumber = $this->generateJournalNumber($date, $unitId);
+      $this->logJournal([
+        'journal_id' => null,
+        'journal_number' => $journal_number,
         'date' => $date,
-        'journal_type' => 'BANK',
-        'source' => 'BANK',
-        'form_type' => 2,
-        'is_posted' => 1,
-        'is_credit' => 1,
-        'accepted_by' => 'SYSTEM',
-        'submitted_by' => 'SYSTEM',
-        'prm_school_units_id' => $this->destinationUnit,
-        'created_at' => Carbon::now(),
-        'updated_at' => Carbon::now()
-      ];
-
-      $journalId = DB::connection('finance_db')->table('journals')->insertGetId($journal);
-
-      $details = [[
-        'journals_id' => $journalId,
-        'code_of_account' => $this->bankCoa,
+        'code_of_account' => '12902',
         'description' => 'Rekonsiliasi H2H',
-        'credit' => $sum,
-        'journal_source' => 'BANK',
-        'debit' => null,
-      ], [
-        'journals_id' => $journalId,
-        'code_of_account' => $this->reconciliationCoa,
-        'description' => 'Rekonsiliasi H2H',
-        'credit' => null,
-        'journal_source' => null,
         'debit' => $sum,
-      ]];
+        'credit' => null,
+        'units_id' => $unitId,
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
+      ]);
 
-      DB::connection('finance_db')->table('journal_details')->insert($details);
-      $this->logJournal($journalId, $journal, $details);
-      DB::connection('finance_db')->table('entity_units')->insert([
-        'entity_type' => 'App\Journals',
-        'entity_id' => $journalId,
-        'prm_school_units_id' => $unitId,
-        'created_at' =>	Carbon::now(),
-        'updated_at' =>	Carbon::now(),
+      foreach($items as $item) {
+        $this->logJournal([
+          'journal_id' => null,
+          'journal_number' => $journal_number,
+          'date' => $date,
+          'code_of_account' => $item->code_of_account,
+          'description' => 'Rekonsiliasi H2H',
+          'debit' => null,
+          'credit' => $item->nominal,
+          'units_id' => $unitId,
+          'countable' => 1,
+          'created_at' => $timestamp,
+          'updated_at' => $timestamp
+        ]);
+      }
+
+      $journalNumber = $this->generateJournalNumber($date, 95);
+      $this->logJournal([
+        'journal_id' => null,
+        'journal_number' => $journal_number,
+        'date' => $date,
+        'code_of_account' => '11310',
+        'description' => 'Rekonsiliasi H2H',
+        'debit' => $sum,
+        'credit' => null,
+        'units_id' => $unitId,
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
+      ]);
+      $this->logJournal([
+        'journal_id' => null,
+        'journal_number' => $journal_number,
+        'date' => $date,
+        'code_of_account' => '12902',
+        'description' => 'Rekonsiliasi H2H',
+        'debit' => null,
+        'credit' => $sum,
+        'units_id' => $unitId,
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
       ]);
 
     }
