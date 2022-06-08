@@ -32,7 +32,7 @@ class ImportMT940Job extends Job
     protected $command;
     private $output;
 
-    public function __construct(ConsoleOutput $consoleOutput) {
+    public function __construct(ConsoleOutput $consoleOutput = new ConsoleOutput()) {
         $this->output = $consoleOutput;
     }
 
