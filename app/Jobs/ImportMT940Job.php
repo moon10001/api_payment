@@ -231,6 +231,7 @@ class ImportMT940Job extends Job
                 $rowCount++;
               }
               if (str_starts_with($line, ':61:')) {
+                $lineContent = substr($line, 4);
                 $data = [
                   'payments_date' => $payment_date,
                   'nominal' => substr(substr($lineContent, 7), 0, -5),
