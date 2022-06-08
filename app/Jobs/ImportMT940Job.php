@@ -47,7 +47,7 @@ class ImportMT940Job extends Job
     private function updateTrInvoice($id, $paymentDate) {
       echo('Updating TR INVOICE');
       echo('---ID          : '.$id);
-      echo('---Payment Date: '.$data['payments_date']);
+      echo('---Payment Date: '.$paymentDate);
 
       return DB::table('tr_invoices')
       ->where('id', $id)
