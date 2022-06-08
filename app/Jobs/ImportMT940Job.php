@@ -184,8 +184,8 @@ class ImportMT940Job extends Job
 
           $fileCount++;
           $data = [];
-          
-          DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
+
+          DB::transaction(function() use(&$rowCount, &$response, &$file, &$mt940, $payment_date, &$data, $filename) {
             try {
               foreach(explode(PHP_EOL, $file) as $line) {
                 if (str_starts_with($line, ':86:UBP')) {
