@@ -45,9 +45,9 @@ class ImportMT940Job extends Job
     }
 
     private function updateTrInvoice($id, $paymentDate) {
-      echo('Updating TR INVOICE'.'\n');
-      echo('---ID          : '.$id.'\n');
-      echo('---Payment Date: '.$paymentDate.'\n');
+      echo('Updating TR INVOICE'."\n");
+      echo('---ID          : '.$id."\n");
+      echo('---Payment Date: '.$paymentDate."\n");
 
       return DB::table('tr_invoices')
       ->where('id', $id)
@@ -59,7 +59,7 @@ class ImportMT940Job extends Job
     }
 
     private function insertTrInvoiceDetails($invoiceId, $data) {
-      echo('Inserting Invoice Details'.'\n');
+      echo('Inserting Invoice Details'."\n");
 
       return DB::table('tr_invoice_details')
       ->updateOrInsert([
@@ -84,13 +84,13 @@ class ImportMT940Job extends Job
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
 
-      echo('Inserting MT940'.'\n');
-      echo('---VA          : '.$data['va'].'\n');
-      echo('---Temps ID    : '.$data['temps_id'].'\n');
-      echo('---Payment Date: '.$data['payments_date'].'\n');
-      echo('---Nominal     : '.$data['nominal'].'\n');
-      echo('---Diff        : '.$data['diff'].'\n');
-      echo('---Mismatch    : '.$data['mismatch'].'\n');
+      echo('Inserting MT940'."\n");
+      echo('---VA          : '.$data['va']."\n");
+      echo('---Temps ID    : '.$data['temps_id']."\n");
+      echo('---Payment Date: '.$data['payments_date']."\n");
+      echo('---Nominal     : '.$data['nominal']."\n");
+      echo('---Diff        : '.$data['diff']."\n");
+      echo('---Mismatch    : '.$data['mismatch']."\n");
 
       DB::table('mt940')
       ->insert([
@@ -114,7 +114,7 @@ class ImportMT940Job extends Job
     	->where('filename', $filename)
     	->where('status', 'PROCESSED')
     	->get();
-      echo('Imported: '.($res->count() >= 1).'\n');
+      echo('Imported: '.($res->count() >= 1)."\n");
     	return $res->count() >= 1;
     }
 
@@ -164,7 +164,7 @@ class ImportMT940Job extends Job
       $rowCount = 0;
       $response = [];
       $files = [];
-      echo('PROCESSING MT940 BEGINS'.'\n');
+      echo('PROCESSING MT940 BEGINS'."\n");
 
       DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
         try {
@@ -175,8 +175,8 @@ class ImportMT940Job extends Job
             if ($this->fileHasBeenImported($filename)) {
               continue;
             }
-            echo('Processing: '.$filename.'\n');
-            $fileDate = substr($filename, 18, 25);
+            echo('Processing: '.$filename."\n");
+            $fileDate = substr($filename, 18, 8);
             $paymentYear = substr($fileDate, 0, 4);
             $paymentMonth = substr($fileDate, 5, 2);
             $paymentDate = substr($fileDate, 7, 2);
@@ -254,8 +254,8 @@ class ImportMT940Job extends Job
           throw $e;
         }
       });
-      echo('==============================================='.'\n');
-      echo('Files processed: '. $fileCount.'\n');
-      echo('Rows processed : '. $rowCount.'\n');
+      echo('==============================================='."\n");
+      echo('Files processed: '. $fileCount."\n");
+      echo('Rows processed : '. $rowCount."\n");
     }
 }
