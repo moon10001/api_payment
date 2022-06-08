@@ -29,13 +29,6 @@ class ImportMT940Job extends Job
 
     use InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $command;
-    private $output;
-
-    public function __construct(ConsoleOutput $consoleOutput = new ConsoleOutput()) {
-        $this->output = $consoleOutput;
-    }
-
     private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
       ->select('nominal', 'payments_date')
@@ -52,9 +45,9 @@ class ImportMT940Job extends Job
     }
 
     private function updateTrInvoice($id, $paymentDate) {
-      $this->output->writeln('Updating TR INVOICE');
-      $this->output->writeln('---ID          : '.$id);
-      $this->output->writeln('---Payment Date: '.$data['payments_date']);
+      $this->info('Updating TR INVOICE');
+      $this->info('---ID          : '.$id);
+      $this->info('---Payment Date: '.$data['payments_date']);
 
       return DB::table('tr_invoices')
       ->where('id', $id)
@@ -66,7 +59,7 @@ class ImportMT940Job extends Job
     }
 
     private function insertTrInvoiceDetails($invoiceId, $data) {
-      $this->output->writeln('Inserting Invoice Details');
+      $this->info('Inserting Invoice Details');
 
       return DB::table('tr_invoice_details')
       ->updateOrInsert([
@@ -91,13 +84,13 @@ class ImportMT940Job extends Job
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
 
-      $this->output->writeln('Inserting MT940');
-      $this->output->writeln('---VA          : '.$data['va']);
-      $this->output->writeln('---Temps ID    : '.$data['temps_id']);
-      $this->output->writeln('---Payment Date: '.$data['payments_date']);
-      $this->output->writeln('---Nominal     : '.$data['nominal']);
-      $this->output->writeln('---Diff        : '.$data['diff']);
-      $this->output->writeln('---Mismatch    : '.$data['mismatch']);
+      $this->info('Inserting MT940');
+      $this->info('---VA          : '.$data['va']);
+      $this->info('---Temps ID    : '.$data['temps_id']);
+      $this->info('---Payment Date: '.$data['payments_date']);
+      $this->info('---Nominal     : '.$data['nominal']);
+      $this->info('---Diff        : '.$data['diff']);
+      $this->info('---Mismatch    : '.$data['mismatch']);
 
       DB::table('mt940')
       ->insert([
@@ -121,7 +114,7 @@ class ImportMT940Job extends Job
     	->where('filename', $filename)
     	->where('status', 'PROCESSED')
     	->get();
-      $this->output->writeln('Imported: '.$res->count() >= 1);
+      $this->info('Imported: '.$res->count() >= 1);
     	return $res->count() >= 1;
     }
 
@@ -171,7 +164,7 @@ class ImportMT940Job extends Job
       $rowCount = 0;
       $response = [];
       $files = [];
-      $this->output->writeln('PROCESSING MT940 BEGINS');
+      $this->info('PROCESSING MT940 BEGINS');
 
       DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
         try {
@@ -182,7 +175,7 @@ class ImportMT940Job extends Job
             if ($this->fileHasBeenImported($filename)) {
               continue;
             }
-            $this->output->writeln('Processing: '.$filename);
+            $this->info('Processing: '.$filename);
             $fileDate = substr($filename, 18, 25);
             $paymentYear = substr($fileDate, 0, 4);
             $paymentMonth = substr($fileDate, 5, 2);
@@ -248,7 +241,7 @@ class ImportMT940Job extends Job
           }
         } catch (Exception $e) {
 
-          error_log('Failed processing : ', $filename);
+          $this->error('Failed processing : ', $filename);
           DB::table('mt940_import_log')
           ->updateOrInsert([
             'filename' => $filename
@@ -256,13 +249,13 @@ class ImportMT940Job extends Job
             'filename' => $filename,
             'processed_at' => Carbon::now(),
             'status' => 'FAILED',
-            'error_log' => $e->getMessage(),
+            '$this->error' => $e->getMessage(),
           ]);
           throw $e;
         }
       });
-      $this->output->writeln('===============================================');
-      $this->output->writeln('Files processed: ', $fileCount);
-      $this->output->writeln('Rows processed : ', $rowCount);
+      $this->info('===============================================');
+      $this->info('Files processed: ', $fileCount);
+      $this->info('Rows processed : ', $rowCount);
     }
 }
