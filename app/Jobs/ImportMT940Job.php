@@ -178,8 +178,8 @@ class ImportMT940Job extends Job
             echo('Processing: '.$filename."\n");
             $fileDate = substr($filename, 18, 8);
             $paymentYear = substr($fileDate, 0, 4);
-            $paymentMonth = substr($fileDate, 5, 2);
-            $paymentDate = substr($fileDate, 7, 2);
+            $paymentMonth = substr($fileDate, 4, 2);
+            $paymentDate = substr($fileDate, 6, 2);
             $payment_date = date('Y-m-d h:i:s', mktime(0, 0, 0, $paymentMonth, $paymentDate, $paymentYear));
             array_push($files, $filename);
 
