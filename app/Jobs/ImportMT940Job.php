@@ -241,7 +241,7 @@ class ImportMT940Job extends Job
           }
         } catch (Exception $e) {
 
-          error_log('Failed processing : ', $filename);
+          error_log('Failed processing : '. $filename);
           DB::table('mt940_import_log')
           ->updateOrInsert([
             'filename' => $filename
@@ -255,7 +255,7 @@ class ImportMT940Job extends Job
         }
       });
       echo('===============================================');
-      echo('Files processed: ', $fileCount);
-      echo('Rows processed : ', $rowCount);
+      echo('Files processed: '. $fileCount);
+      echo('Rows processed : '. $rowCount);
     }
 }
