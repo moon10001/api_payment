@@ -114,7 +114,7 @@ class ImportMT940Job extends Job
     	->where('filename', $filename)
     	->where('status', 'PROCESSED')
     	->get();
-      echo('Imported: '.$res->count() >= 1.'\n');
+      echo('Imported: '.($res->count() >= 1).'\n');
     	return $res->count() >= 1;
     }
 
