@@ -10,13 +10,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Symfony\Component\Console\Output\ConsoleOutput;
-use App\Jobs\ReconcilePaymentJob;
-use App\Jobs\UpdateTransactionsTableJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
 
-abstract class Job implements ShouldQueue
+class ImportMT940Job extends Job
 {
     /*
     |--------------------------------------------------------------------------
@@ -249,7 +247,7 @@ abstract class Job implements ShouldQueue
             $this->insert($mt940);
           }
         } catch (Exception $e) {
-          
+
           error_log('Failed processing : ', $filename);
           DB::table('mt940_import_log')
           ->updateOrInsert([
