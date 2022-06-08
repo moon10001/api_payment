@@ -166,95 +166,99 @@ class ImportMT940Job extends Job
       $files = [];
       echo('PROCESSING MT940 BEGINS'."\n");
 
-      DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
-        try {
-          $invoicesIds = [];
-          foreach(Storage::disk('mt940')->files('/') as $filename) {
-            $mt940 = [];
-            $file = Storage::disk('mt940')->get($filename);
-            if ($this->fileHasBeenImported($filename)) {
-              continue;
-            }
-            echo('Processing: '.$filename."\n");
-            $fileDate = substr($filename, 18, 8);
-            $paymentYear = substr($fileDate, 0, 4);
-            $paymentMonth = substr($fileDate, 4, 2);
-            $paymentDate = substr($fileDate, 6, 2);
-            $payment_date = date('Y-m-d h:i:s', mktime(0, 0, 0, $paymentMonth, $paymentDate, $paymentYear));
-            array_push($files, $filename);
-
-            $fileCount++;
-            $data = [];
-
-            foreach(explode(PHP_EOL, $file) as $line) {
-              if (str_starts_with($line, ':86:UBP')) {
-                $lineContent = substr($line, 7);
-                $periode = substr($lineContent, 26, 8);
-                $va = substr($lineContent, 17, 17);
-                $tempsId = substr($va, 0, 9);
-                $sum = 0;
-
-                if (!str_starts_with($periode, 4)) {
-                  $fromMonth = substr($periode, 0, 2);
-                  $toMonth = substr($periode, 4, 2);
-                  $fromYear = substr($periode, 2, 2);
-                  $toYear = substr($periode, 6, 2);
-                  $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
-                  $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
-                  $id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
-                  $periode_to = date('my', $toTimestamp);
-                  $periode_from = date('my', $fromTimestamp);
-                } else {
-                  $term = substr($periode, 5, 3);
-                  $id = 'UPP-' . $tempsId . $term;
-                  if(str_starts_with($periode, '41101')) {
-                    $id = 'DPP-' . $tempsId . $term;
-                    $periode_to = '41101'.$term;
-                    $periode_from = '41101'.$term;
-                  }else if(str_starts_with($periode, '42101')) {
-                    $id = 'UPD-' . $tempsId . $term;
-                    $periode_to = '42101'.$term;
-                    $periode_from = '42101'.$term;
-                  }
-                }
-                array_push($invoicesIds, $id);
-
-                $data = array_merge($data, [
-                  'va' => $va,
-                  'tr_invoices_id' => $id,
-                  'temps_id' => $tempsId,
-                  'periode_to' => $periode_to,
-                  'periode_from' => $periode_from
-                ]);
-                array_push($mt940, $data);
-                array_push($response, $data);
-                $rowCount++;
-              }
-              if (str_starts_with($line, ':61:')) {
-                $lineContent = substr($line, 4);
-                $data = [
-                  'payments_date' => $payment_date,
-                  'nominal' => substr(substr($lineContent, 7), 0, -5),
-                ];
-              }
-            }
-            $this->insert($mt940);
+      try {
+        $invoicesIds = [];
+        foreach(Storage::disk('mt940')->files('/') as $filename) {
+          $file = Storage::disk('mt940')->get($filename);
+          if ($this->fileHasBeenImported($filename)) {
+            continue;
           }
-        } catch (Exception $e) {
+          echo('Processing: '.$filename."\n");
+          $mt940 = [];
+          $fileDate = substr($filename, 18, 8);
+          $paymentYear = substr($fileDate, 0, 4);
+          $paymentMonth = substr($fileDate, 4, 2);
+          $paymentDate = substr($fileDate, 6, 2);
+          $payment_date = date('Y-m-d h:i:s', mktime(0, 0, 0, $paymentMonth, $paymentDate, $paymentYear));
+          array_push($files, $filename);
 
-          error_log('Failed processing : '. $filename);
-          DB::table('mt940_import_log')
-          ->updateOrInsert([
-            'filename' => $filename
-          ], [
-            'filename' => $filename,
-            'processed_at' => Carbon::now(),
-            'status' => 'FAILED',
-            'error_log' => $e->getMessage(),
-          ]);
-          throw $e;
+          $fileCount++;
+          $data = [];
+          
+          DB::transaction(function() use(&$fileCount, &$rowCount, &$response, &$files) {
+            try {
+              foreach(explode(PHP_EOL, $file) as $line) {
+                if (str_starts_with($line, ':86:UBP')) {
+                  $lineContent = substr($line, 7);
+                  $periode = substr($lineContent, 26, 8);
+                  $va = substr($lineContent, 17, 17);
+                  $tempsId = substr($va, 0, 9);
+                  $sum = 0;
+
+                  if (!str_starts_with($periode, 4)) {
+                    $fromMonth = substr($periode, 0, 2);
+                    $toMonth = substr($periode, 4, 2);
+                    $fromYear = substr($periode, 2, 2);
+                    $toYear = substr($periode, 6, 2);
+                    $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
+                    $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
+                    $id = 'INV-' . $tempsId . date('ym', $fromTimestamp);
+                    $periode_to = date('my', $toTimestamp);
+                    $periode_from = date('my', $fromTimestamp);
+                  } else {
+                    $term = substr($periode, 5, 3);
+                    $id = 'UPP-' . $tempsId . $term;
+                    if(str_starts_with($periode, '41101')) {
+                      $id = 'DPP-' . $tempsId . $term;
+                      $periode_to = '41101'.$term;
+                      $periode_from = '41101'.$term;
+                    }else if(str_starts_with($periode, '42101')) {
+                      $id = 'UPD-' . $tempsId . $term;
+                      $periode_to = '42101'.$term;
+                      $periode_from = '42101'.$term;
+                    }
+                  }
+                  array_push($invoicesIds, $id);
+
+                  $data = array_merge($data, [
+                    'va' => $va,
+                    'tr_invoices_id' => $id,
+                    'temps_id' => $tempsId,
+                    'periode_to' => $periode_to,
+                    'periode_from' => $periode_from
+                  ]);
+                  array_push($mt940, $data);
+                  array_push($response, $data);
+                  $rowCount++;
+                }
+                if (str_starts_with($line, ':61:')) {
+                  $lineContent = substr($line, 4);
+                  $data = [
+                    'payments_date' => $payment_date,
+                    'nominal' => substr(substr($lineContent, 7), 0, -5),
+                  ];
+                }
+              }
+              $this->insert($mt940);
+            } catch (Exception $e) {
+
+              error_log('Failed processing : '. $filename);
+              DB::table('mt940_import_log')
+              ->updateOrInsert([
+                'filename' => $filename
+              ], [
+                'filename' => $filename,
+                'processed_at' => Carbon::now(),
+                'status' => 'FAILED',
+                'error_log' => $e->getMessage(),
+              ]);
+              throw $e;
+            }
+          });
         }
-      });
+      } catch (Exception $e) {
+        error_log('Failed Reading'."\n" );
+      }
       echo('==============================================='."\n");
       echo('Files processed: '. $fileCount."\n");
       echo('Rows processed : '. $rowCount."\n");
