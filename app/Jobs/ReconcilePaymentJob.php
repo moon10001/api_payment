@@ -60,9 +60,9 @@ class ReconcilePaymentJob extends Job
     	    		->where('temps_id', $item->temps_id)
     	    		->whereRaw(
                 'IF(CHAR_LENGTH(tr_invoices.periode) = 4, tr_invoices.periode_date BETWEEN ? and ?, tr_invoices.periode = ?)',
-                $item->periode_date_from, $item->periode_date_to, $item->periode_from
+                [$item->periode_date_from, $item->periode_date_to, $item->periode_from]
               )
-              ->whereRaw('DATE(tr_invoices.payments_date) = ?', $item->payment_date)
+              ->whereRaw('DATE(tr_invoices.payments_date) = ?', [$item->payment_date])
     	    		->get();
   	       		foreach($paymentDetails as $transaction) {
   	              DB::table('daily_reconciled_reports')->insert([
