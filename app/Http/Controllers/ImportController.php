@@ -21,7 +21,7 @@ class ImportController extends BaseController
         $this->output = $consoleOutput;
     }
 
-    private function getTrInvoice($id, $tempsId = '') {
+    private function getTrInvoice($id, $tempsId = '', $periodeTo = '', $periodeFrom = '') {
       $trInvoice = DB::table('tr_invoices')
       ->select('nominal', 'payments_date')
       ->where('id', $id)

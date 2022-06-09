@@ -35,7 +35,7 @@ class ImportMT940Job extends Job
       ->where('id', $id)
       ->first();
 
-      if(empty($trInvoice) || !$trInvoice) {
+      if((empty($trInvoice) || !$trInvoice) && !empty($tempsId)) {
         $trInvoice = DB::table('tr_invoices')
         ->select('nominal', 'payments_date')
         ->where('temps_id', $tempsId)
@@ -120,6 +120,17 @@ class ImportMT940Job extends Job
     	return $res->count() >= 1;
     }
 
+    public function logMT940File($filename, $status = 'READING', $message = '') {
+      DB::table('mt940_import_log')->updateOrInsert([
+        'filename' => $filename,
+      ], [
+        'filename' => $filename,
+        'processed_at' => Carbon::now(),
+        'status' => $status,
+        'error_log' => $message
+      ]);
+    }
+
     public function insert($mt940) {
         foreach($mt940 as $data) {
             $trInvoice = $this->getTrInvoice($data['tr_invoices_id'], $data['temps_id']);
@@ -131,8 +142,8 @@ class ImportMT940Job extends Job
 
             if ($data['periode_to'] !== $data['periode_from']) {
               $fromMonth = substr($data['periode_from'], 0, 2);
-              $toMonth = substr($data['periode_to'], 2, 2);
-              $fromYear = substr($data['periode_from'], 0, 2);
+              $toMonth = substr($data['periode_to'], 0, 2);
+              $fromYear = substr($data['periode_from'], 2, 2);
               $toYear = substr($data['periode_to'], 2, 2);
               $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
               $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
@@ -157,7 +168,7 @@ class ImportMT940Job extends Job
               'diff' => floatval($sum) - floatval($data['nominal']),
               'mismatch' => floatval($sum) !== floatval($data['nominal'])
             ]);
-            $this->insertMT940($data);
+            $this->insertMT940($data );
         }
     }
 
@@ -175,6 +186,7 @@ class ImportMT940Job extends Job
           if ($this->fileHasBeenImported($filename)) {
             continue;
           }
+          $this->logMT940File($filename);
           echo('Processing: '.$filename."\n");
           $mt940 = [];
           $fileDate = substr($filename, 18, 8);
@@ -244,15 +256,7 @@ class ImportMT940Job extends Job
             } catch (Exception $e) {
 
               error_log('Failed processing : '. $filename);
-              DB::table('mt940_import_log')
-              ->updateOrInsert([
-                'filename' => $filename
-              ], [
-                'filename' => $filename,
-                'processed_at' => Carbon::now(),
-                'status' => 'FAILED',
-                'error_log' => $e->getMessage(),
-              ]);
+              $this->logMT940File($filename, 'FAILED', $e->getMessage);
               throw $e;
             }
           });
