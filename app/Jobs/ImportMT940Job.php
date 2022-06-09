@@ -254,10 +254,10 @@ class ImportMT940Job extends Job
               }
               $this->insert($mt940);
             } catch (Exception $e) {
-
               error_log('Failed processing : '. $filename);
-              $this->logMT940File($filename, 'FAILED', $e->getMessage);
               throw $e;
+            } finally {
+              $this->logMT940File($filename, 'PROCESSED');
             }
           });
         }
