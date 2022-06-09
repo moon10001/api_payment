@@ -78,8 +78,8 @@ class ImportMT940Job extends Job
 
     private function insertMT940($data) {
       $fromMonth = substr($data['periode_from'], 0, 2);
-      $toMonth = substr($data['periode_to'], 2, 2);
-      $fromYear = substr($data['periode_from'], 0, 2);
+      $toMonth = substr($data['periode_to'], 0, 2);
+      $fromYear = substr($data['periode_from'], 2, 2);
       $toYear = substr($data['periode_to'], 2, 2);
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
@@ -88,6 +88,8 @@ class ImportMT940Job extends Job
       echo('---VA          : '.$data['va']."\n");
       echo('---Temps ID    : '.$data['temps_id']."\n");
       echo('---Payment Date: '.$data['payments_date']."\n");
+      echo('---Periode From: '.date('Y-m-d', $fromTimestamp)."\n");
+      echo('---Periode To  : '.date('Y-m-d', $toTimestamp)."\n");
       echo('---Nominal     : '.$data['nominal']."\n");
       echo('---Diff        : '.$data['diff']."\n");
       echo('---Mismatch    : '.$data['mismatch']."\n");
@@ -218,7 +220,6 @@ class ImportMT940Job extends Job
                       $periode_from = '42101'.$term;
                     }
                   }
-                  array_push($invoicesIds, $id);
 
                   $data = array_merge($data, [
                     'va' => $va,
