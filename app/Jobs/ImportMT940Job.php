@@ -83,7 +83,6 @@ class ImportMT940Job extends Job
       $toYear = substr($data['periode_to'], 2, 2);
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
-      dd($data['periode_to'], $toYear, $toTimestamp);
       
       echo('Inserting MT940'."\n");
       echo('---VA          : '.$data['va']."\n");
