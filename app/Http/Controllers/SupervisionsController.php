@@ -28,13 +28,14 @@ class SupervisionsController extends Controller
     public function post(Request $request) {
       $year = date('Y');
       $va = $request->va_code;
-      $coa = $request->coa_code;
+      $coa = $request->coa;
       if (isset($request->year)) {
         $year = $request->year;
       }
       $prmPayments = $this->getPrmPayments();
-      $paymentId = $prmPayments->where('coa', '=', $coa)->pluck('id');
+      $paymentId = $prmPayments->where('coa', '=', $coa)->pluck('id')->first();
 
+	  DB::enableQueryLog();
       $trInvoices = DB::table('tr_invoices')
       ->select(
         DB::Raw(' tr_invoices.id, MONTH(tr_invoices.periode_date) as month, tr_payment_details.nominal')
@@ -42,18 +43,21 @@ class SupervisionsController extends Controller
       ->join('tr_payment_details', 'tr_payment_details.invoices_id' , '=', 'tr_invoices.id')
       ->whereYear('tr_invoices.periode_date', $year)
       ->where('tr_payment_details.payments_id', $paymentId)
-      ->where('tr_invoices.temps_id', 'like', $va.'%')
+      ->where('tr_invoices.temps_id', 'like', $va[0]['va_code'].'%')
       ->get();
 
       $invoicesId = $trInvoices->pluck('id');
       $trInvoiceDetails = DB::table('tr_invoice_details')
-      ->whereIn('invoices_id', $invoicesId->unique()->all())
+      ->select('tr_invoice_details.invoices_id', 'payments_type', 'tr_payment_details.nominal')
+      ->join('tr_payment_details', 'tr_payment_details.invoices_id', '=', 'tr_invoice_details.invoices_id')
+      ->where('tr_payment_details.payments_id', $paymentId)
+      ->whereIn('tr_invoice_details.invoices_id', $invoicesId->unique()->all())
       ->get();
-
       $res = [];
-      $data = $trInvoices->map(function($o) use($trInvoiceDetails, $res) {
-        if (!isset($res[$o->month])) {
-          $month = $o->month;
+ 
+      foreach($trInvoices as $o) {
+      	$month = $o->month;
+        if (!isset($res[$month])) {
           $res[$month] = [
             'total' => 0,
             'outstanding' => 0,
@@ -63,15 +67,19 @@ class SupervisionsController extends Controller
           ];
         }
         $filteredDetails = $trInvoiceDetails->where('invoices_id', $o->id);
+ 
+ 		$res[$month]['total'] += $o->nominal;
         if ($filteredDetails->isNotEmpty()) {
-          $res[$month]['total'] += $o->nominal;
           $res[$month]['h2h'] += $filteredDetails->where('payments_type', '=', 'H2H')->sum('nominal');
-          $res[$month]['pg'] += $filteredDetails->where('payments_type', '=', 'Fastpay')->sum('nominal');
+          $res[$month]['pg'] += $filteredDetails->where('payments_type', '=', 'Faspay')->sum('nominal');
           $res[$month]['offline'] += $filteredDetails->where('payments_type', '=', 'Offline')->sum('nominal');
-          $res[$month]['outstanding'] = $res[$month]['total'] - $res[$month]['h2h'] - $res[$month]['pg'] -> $res[$month]['offline'];
-        }
-      });
-      return $res;
+          $res[$month]['outstanding'] = $res[$month]['total'] - $res[$month]['h2h'] - $res[$month]['pg'] - $res[$month]['offline'];
+        } 
+      };
+      
+      return [
+      	'report' => $res
+      ];
     }
 
     public function options(Request $request) {
