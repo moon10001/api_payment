@@ -22,5 +22,5 @@ $router->get('/import', 'ImportController@import');
 $router->post('/report', 'ReportController@get');
 $router->post('/recap', 'ReportController@recap');
 $router->post('/options/{type}', 'OptionsController@get');
-$router->post('/supervision', 'SupervisionsController@post');
+$router->post('/supervision/report', 'SupervisionsController@post');
 $router->post('/supervision/options/{type}', 'SupervisionsController@options');
