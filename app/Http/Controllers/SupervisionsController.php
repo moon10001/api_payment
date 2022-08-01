@@ -65,7 +65,7 @@ class ReportController extends Controller
         $filteredDetails = $trInvoiceDetails->where('invoices_id', $o->id);
         if ($filteredDetails->isNotEmpty()) {
           $res[$month]['total'] += $o->nominal;
-          $res[$month]['h2h'] += $filteredDetails->where('payments_type', '=' 'H2H')->sum('nominal');
+          $res[$month]['h2h'] += $filteredDetails->where('payments_type', '=', 'H2H')->sum('nominal');
           $res[$month]['pg'] += $filteredDetails->where('payments_type', '=', 'Fastpay')->sum('nominal');
           $res[$month]['offline'] += $filteredDetails->where('payments_type', '=', 'Offline')->sum('nominal');
           $res[$month]['outstanding'] = $res[$month]['total'] - $res[$month]['h2h'] - $res[$month]['pg'] -> $res[$month]['offline'];
