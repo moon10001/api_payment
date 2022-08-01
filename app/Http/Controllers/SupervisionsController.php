@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
-class ReportController extends Controller
+class SupervisionsController extends Controller
 {
     /**
      * Create a new controller instance.
