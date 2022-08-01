@@ -53,7 +53,15 @@ class SupervisionsController extends Controller
       ->where('tr_payment_details.payments_id', $paymentId)
       ->whereIn('tr_invoice_details.invoices_id', $invoicesId->unique()->all())
       ->get();
-      $res = [];
+	  $res = [];
+	  $summary=[
+	  	'total' => 0,
+	  	'outstanding' => 0,
+	  	'h2h' => 0,
+	  	'pg' => 0,
+	  	'offline' => 0,
+	  	'totalPayment' => 0,
+	  ];
  
       foreach($trInvoices as $o) {
       	$month = $o->month;
@@ -64,21 +72,30 @@ class SupervisionsController extends Controller
             'h2h' => 0,
             'pg' => 0,
             'offline' => 0,
+            'totalPayment' => 0,
           ];
         }
         $filteredDetails = $trInvoiceDetails->where('invoices_id', $o->id);
  
  		$res[$month]['total'] += $o->nominal;
+ 		$summary['total'] += $o->nominal;
         if ($filteredDetails->isNotEmpty()) {
           $res[$month]['h2h'] += $filteredDetails->where('payments_type', '=', 'H2H')->sum('nominal');
+          $summary['h2h'] += $filteredDetails->where('payments_type', '=', 'H2H')->sum('nominal');
           $res[$month]['pg'] += $filteredDetails->where('payments_type', '=', 'Faspay')->sum('nominal');
+          $summary['pg'] += $filteredDetails->where('payments_type', '=', 'Faspay')->sum('nominal');
           $res[$month]['offline'] += $filteredDetails->where('payments_type', '=', 'Offline')->sum('nominal');
-          $res[$month]['outstanding'] = $res[$month]['total'] - $res[$month]['h2h'] - $res[$month]['pg'] - $res[$month]['offline'];
+          $summary['offline'] += $filteredDetails->where('payments_type', '=', 'Offline')->sum('nominal');
+          $res[$month]['totalPayment'] = $res[$month]['h2h'] + $res[$month]['pg'] + $res[$month]['offline'];
+          $summary['totalPayment'] = $summary['h2h'] + $summary['pg'] + $summary['offline'];
+          $res[$month]['outstanding'] += $res[$month]['total'] - $res[$month]['totalPayment'];
+      	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
         } 
       };
       
       return [
-      	'report' => $res
+      	'report' => $res,
+      	'summary' => $summary,
       ];
     }
 
