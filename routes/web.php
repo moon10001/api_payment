@@ -23,4 +23,4 @@ $router->post('/report', 'ReportController@get');
 $router->post('/recap', 'ReportController@recap');
 $router->post('/options/{type}', 'OptionsController@get');
 $router->post('/supervision', 'SupervisionsController@post');
-$router->post('/supervision/options', 'SupervisionsController@options');
+$router->post('/supervision/options/{type}', 'SupervisionsController@options');
