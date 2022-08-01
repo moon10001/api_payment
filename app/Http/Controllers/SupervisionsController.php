@@ -80,8 +80,8 @@ class SupervisionsController extends Controller
         $data = [];
         foreach($res as $prm) {
           array_push($data, [
-            'label' => $data->name,
-            'value' => $data->coa
+            'label' => $prm->name,
+            'value' => $prm->coa
           ]);
         }
         return $data;
