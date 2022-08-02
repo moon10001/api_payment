@@ -37,6 +37,36 @@ class SupervisionsController extends Controller
       $prmPayments = $this->getPrmPayments();
       $paymentId = $prmPayments->where('coa', '=', $coa)->pluck('id')->first();
 
+	  $outstanding = DB::table('tr_invoices')
+	        ->selectRaw('
+	                periode_year,
+	                                SUM(tr_payment_details.nominal) as total_invoice
+	                                      ')
+	                                            ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
+	                                                  ->where('tr_invoices.periode_date', '>=', ($year-5).'-7-1')
+	                                                  ->where('tr_invoices.periode_date', '<=', $year.'-6-30')
+	                                                        ->where('tr_payment_details.payments_id', $paymentId)
+	                                                              ->where('tr_invoices.temps_id', 'like', $va.'%')
+	                                                                    ->groupBy('periode_year')
+	                                                                          ->get();
+	                                                                          
+	                                                                                $outstandingDetails = DB::table('tr_invoices')
+	                                                                                      ->selectRaw('
+	                                                                                              SUM(tr_payment_details.nominal) as total_nominal,
+	                                                                                                      tr_payment_details.payments_id,
+	                                                                                                                      tr_invoice_details.payments_type
+	                                                                                                                            ')
+	                                                                                                                                  ->join('tr_invoice_details', 'tr_invoice_details.invoices_id', 'tr_invoices.id')
+	                                                                                                                                        ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
+	                                                                                                                                              ->where('tr_invoices.periode_date', '>=', ($year-5).'-7-1')
+	                                                                                                                                              ->where('tr_invoices.periode_date', '<=', $year.'-6-30')
+	                                                                                                                                                    ->where('tr_payment_details.payments_id', $paymentId)
+	                                                                                                                                                          ->where('tr_invoices.temps_id', 'like', $va.'%')
+	                                                                                                                                                                ->where('tr_invoice_details.payments_type', '=', 'H2H')
+	                                                                                                                                                                      ->groupBy('periode_year', 'payments_type')
+	                                                                                                                                                                            ->get();
+	                                                                                                                                                                            
+
       $q = DB::table('tr_invoices')
       ->selectRaw('
         periode_year,
@@ -98,6 +128,8 @@ class SupervisionsController extends Controller
       }
 
       return [
+        'outstanding' => $outstanding,
+        'outstandingDetails' => $outstandingDetails,
       	'report' => $res,
       	'summary' => $summary,
       ];
