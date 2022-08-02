@@ -40,6 +40,7 @@ class SupervisionsController extends Controller
 	    $outstanding = DB::table('tr_invoices')
       ->selectRaw('
         periode_year,
+        CONCAT("TA ", periode_year, "/", periode_year+1) as month,
         SUM(tr_payment_details.nominal) as total_invoice
       ')
       ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
@@ -94,19 +95,33 @@ class SupervisionsController extends Controller
       ->groupBy('periode_month', 'payments_type')
       ->get();
 
-	  $res = [];
+    $outstandingData = [];
+    foreach($outstanding as $o) {
+      $month = $o->month;
+      $totalPayment = $outstandingDetails->Where('periode_month', $month)->sum('total_nominal');
+      $outstandingData[$month] = [
+        'total' => $o->total_invoice,
+        'outstanding' => $o->total_invoice - $totalPayment,
+        'h2h' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
+        'pg' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
+        'offline' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
+        'totalPayment' => $totalPayment
+      }
+    }
+
+	  $res = $outstandingData;
 	  $summary=[
-	  	'total' => $q->sum('total_invoice'),
+	  	'total' => $outstanding->sum('total_invoice') + $q->sum('total_invoice'),
 	  	'outstanding' => 0,
-	  	'h2h' => $details->where('payments_type', '=', 'H2H')->sum('total_nominal'),
-	  	'pg' => $details->where('payments_type', '=', 'Faspay')->sum('total_nominal'),
-	  	'offline' => $details->where('payments_type', '=', 'Offline')->sum('total_nominal'),
+	  	'h2h' => $outstandingDetails->where('payments_type', '=', 'H2H')->sum('total_nominal') + $details->where('payments_type', '=', 'H2H')->sum('total_nominal'),
+	  	'pg' => $outstandingDetails->where('payments_type', '=', 'Faspay')->sum('total_nominal') + $details->where('payments_type', '=', 'Faspay')->sum('total_nominal'),
+	  	'offline' => $outstandingDetails->where('payments_type', '=', 'Offline')->sum('total_nominal') + $details->where('payments_type', '=', 'Offline')->sum('total_nominal'),
 	  	'totalPayment' => $details->sum('total_nominal'),
 	  ];
 
 	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
 
-      foreach($q as $o) {
+    foreach($q as $o) {
     	$month = $o->periode_month;
         if (!isset($res[$month])) {
           $res[$month] = [
