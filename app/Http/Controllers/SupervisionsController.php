@@ -35,7 +35,59 @@ class SupervisionsController extends Controller
       $prmPayments = $this->getPrmPayments();
       $paymentId = $prmPayments->where('coa', '=', $coa)->pluck('id')->first();
 
-	  DB::enableQueryLog();
+      $q = DB::table('tr_invoices')
+      ->selectRaw('
+        periode_year,
+        periode_month,
+        @total_invoice := SUM(tr_payment_details.nominal) as total_invoice,
+        @h2h := IFNULL(SUM(h2h_table.nominal), 0) as total_h2h,
+        @pg := IFNULL(SUM(pg_table.nominal), 0) as total_pg,
+        @offline := IFNULL(SUM(offline_table.nominal), 0) as total_offline,
+        @total_payment := IFNULL(@h2h + @pg + @offline, 0) as total_payment,
+        @outstanding := @total_invoice - @total_payment as outstanding
+      ')
+      ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
+      ->leftJoin(DB::Raw('(SELECT
+        tr_payment_details.nominal,
+        tr_payment_details.payments_id,
+        tr_payment_details.invoices_id
+        from
+        tr_invoice_details
+        inner join tr_payment_details on tr_payment_details.invoices_id = tr_invoice_details.invoices_id
+        where
+        tr_invoice_details.payments_type = "H2H") as h2h_table
+        '), function($join) {
+          $join->on('h2h_table.invoices_id', '=', 'tr_invoices.invoices_id')
+        })
+      ->leftJoin(DB::Raw('(SELECT
+        tr_payment_details.nominal,
+        tr_payment_details.payments_id,
+        tr_payment_details.invoices_id
+        from
+        tr_invoice_details
+        inner join tr_payment_details on tr_payment_details.invoices_id = tr_invoice_details.invoices_id
+        where
+        tr_invoice_details.payments_type = "Faspay") as pg_table
+        '), function($join) {
+          $join->on('h2h_table.invoices_id', '=', 'tr_invoices.invoices_id')
+        })
+      ->leftJoin(DB::Raw('(SELECT
+        tr_payment_details.nominal,
+        tr_payment_details.payments_id,
+        tr_payment_details.invoices_id
+        from
+        tr_invoice_details
+        inner join tr_payment_details on tr_payment_details.invoices_id = tr_invoice_details.invoices_id
+        where
+        tr_invoice_details.payments_type = "Offline") as offline_table
+        '), function($join) {
+          $join->on('h2h_table.invoices_id', '=', 'tr_invoices.invoices_id')
+        })
+      ->where('tr_invoices.periode_year', $year)
+      ->where('tr_payment_details.payments_id', $paymentId)
+      ->where('tr_invoices.temps_id', 'like', $va.'%')
+      ->groupBy('periode_month');
+
       $trInvoices = DB::table('tr_invoices')
       ->select(
         DB::Raw(' tr_invoices.id, MONTH(tr_invoices.periode_date) as month, tr_payment_details.nominal')
@@ -62,7 +114,7 @@ class SupervisionsController extends Controller
 	  	'offline' => 0,
 	  	'totalPayment' => 0,
 	  ];
- 
+
       foreach($trInvoices as $o) {
       	$month = $o->month;
         if (!isset($res[$month])) {
@@ -76,7 +128,7 @@ class SupervisionsController extends Controller
           ];
         }
         $filteredDetails = $trInvoiceDetails->where('invoices_id', $o->id);
- 
+
  		$res[$month]['total'] += $o->nominal;
  		$summary['total'] += $o->nominal;
         if ($filteredDetails->isNotEmpty()) {
@@ -90,9 +142,9 @@ class SupervisionsController extends Controller
           $summary['totalPayment'] = $summary['h2h'] + $summary['pg'] + $summary['offline'];
           $res[$month]['outstanding'] += $res[$month]['total'] - $res[$month]['totalPayment'];
       	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
-        } 
+        }
       };
-      
+
       return [
       	'report' => $res,
       	'summary' => $summary,
