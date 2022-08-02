@@ -86,25 +86,9 @@ class SupervisionsController extends Controller
       ->where('tr_invoices.periode_year', $year)
       ->where('tr_payment_details.payments_id', $paymentId)
       ->where('tr_invoices.temps_id', 'like', $va.'%')
-      ->groupBy('periode_month');
-
-      $trInvoices = DB::table('tr_invoices')
-      ->select(
-        DB::Raw(' tr_invoices.id, MONTH(tr_invoices.periode_date) as month, tr_payment_details.nominal')
-      )
-      ->join('tr_payment_details', 'tr_payment_details.invoices_id' , '=', 'tr_invoices.id')
-      ->whereYear('tr_invoices.periode_date', $year)
-      ->where('tr_payment_details.payments_id', $paymentId)
-      ->where('tr_invoices.temps_id', 'like', $va[0]['va_code'].'%')
+      ->groupBy('periode_month')
       ->get();
 
-      $invoicesId = $trInvoices->pluck('id');
-      $trInvoiceDetails = DB::table('tr_invoice_details')
-      ->select('tr_invoice_details.invoices_id', 'payments_type', 'tr_payment_details.nominal')
-      ->join('tr_payment_details', 'tr_payment_details.invoices_id', '=', 'tr_invoice_details.invoices_id')
-      ->where('tr_payment_details.payments_id', $paymentId)
-      ->whereIn('tr_invoice_details.invoices_id', $invoicesId->unique()->all())
-      ->get();
 	  $res = [];
 	  $summary=[
 	  	'total' => 0,
@@ -115,35 +99,31 @@ class SupervisionsController extends Controller
 	  	'totalPayment' => 0,
 	  ];
 
-      foreach($trInvoices as $o) {
-      	$month = $o->month;
-        if (!isset($res[$month])) {
-          $res[$month] = [
-            'total' => 0,
-            'outstanding' => 0,
-            'h2h' => 0,
-            'pg' => 0,
-            'offline' => 0,
-            'totalPayment' => 0,
-          ];
-        }
-        $filteredDetails = $trInvoiceDetails->where('invoices_id', $o->id);
-
- 		$res[$month]['total'] += $o->nominal;
- 		$summary['total'] += $o->nominal;
-        if ($filteredDetails->isNotEmpty()) {
-          $res[$month]['h2h'] += $filteredDetails->where('payments_type', '=', 'H2H')->sum('nominal');
-          $summary['h2h'] += $filteredDetails->where('payments_type', '=', 'H2H')->sum('nominal');
-          $res[$month]['pg'] += $filteredDetails->where('payments_type', '=', 'Faspay')->sum('nominal');
-          $summary['pg'] += $filteredDetails->where('payments_type', '=', 'Faspay')->sum('nominal');
-          $res[$month]['offline'] += $filteredDetails->where('payments_type', '=', 'Offline')->sum('nominal');
-          $summary['offline'] += $filteredDetails->where('payments_type', '=', 'Offline')->sum('nominal');
-          $res[$month]['totalPayment'] = $res[$month]['h2h'] + $res[$month]['pg'] + $res[$month]['offline'];
-          $summary['totalPayment'] = $summary['h2h'] + $summary['pg'] + $summary['offline'];
-          $res[$month]['outstanding'] += $res[$month]['total'] - $res[$month]['totalPayment'];
-      	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
-        }
-      };
+    foreach($q as $o) {
+    	$month = $o->periode_month;
+      if (!isset($res[$month])) {
+        $res[$month] = [
+          'total' => 0,
+          'outstanding' => 0,
+          'h2h' => 0,
+          'pg' => 0,
+          'offline' => 0,
+          'totalPayment' => 0,
+        ];
+      }
+   		$res[$month]['total'] += $o->total_invoice;
+   		$summary['total'] += $o->total_invoice;
+      $res[$month]['h2h'] += $o->total_h2h;
+      $summary['h2h'] += $o->total_h2h;
+      $res[$month]['pg'] += $o->total_pg;
+      $summary['pg'] += $o->total_pg;
+      $res[$month]['offline'] += $o->total_offline
+      $summary['offline'] += $o->total_offline
+      $res[$month]['totalPayment'] = $o->total_h2h + $o->total_pg + $o->total_offline;
+      $summary['totalPayment'] += $o->total_h2h + $o->total_pg + $o->total_offline;
+      $res[$month]['outstanding'] += $o->total_invoice - $o->total_payment;
+  	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment']; 
+    }
 
       return [
       	'report' => $res,
