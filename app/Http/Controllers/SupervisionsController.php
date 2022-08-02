@@ -109,7 +109,7 @@ class SupervisionsController extends Controller
       ];
     }
 
-	  $res = $outstandingData;
+	  $res = [];
 	  $summary=[
 	  	'total' => $outstanding->sum('total_invoice') + $q->sum('total_invoice'),
 	  	'outstanding' => 0,
@@ -141,8 +141,7 @@ class SupervisionsController extends Controller
       }
 
       return [
-        'outstanding' => $outstanding,
-        'outstandingDetails' => $outstandingDetails,
+        'outstanding' => $outstandingData,
       	'report' => $res,
       	'summary' => $summary,
       ];
