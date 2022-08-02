@@ -103,8 +103,8 @@ class SupervisionsController extends Controller
         'total' => $o->total_invoice,
         'outstanding' => $o->total_invoice - $totalPayment,
         'h2h' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
-        'pg' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
-        'offline' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
+        'pg' => $outstandingDetails->where('payments_type', 'Faspay')->where('periode_month', $month)->pluck('total_nominal'),
+        'offline' => $outstandingDetails->where('payments_type', 'Offline')->where('periode_month', $month)->pluck('total_nominal'),
         'totalPayment' => $totalPayment
       ];
     }
