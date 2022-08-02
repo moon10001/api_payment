@@ -231,6 +231,8 @@ class ImportMT940Job extends Job
                       $periode_to = '42101'.$term;
                       $periode_from = '42101'.$term;
                     }
+					$periode_to = '41201'.$term;
+					$periode_from = '41201'.$term;
                   }
 
                   $data = array_merge($data, [
