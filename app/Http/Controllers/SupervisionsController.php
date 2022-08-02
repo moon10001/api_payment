@@ -27,6 +27,8 @@ class SupervisionsController extends Controller
 
     public function post(Request $request) {
       $year = date('Y');
+      $endYear = $year + 1;
+     
       $va = $request->va_code[0]['va_code'];
       $coa = $request->coa;
       if (isset($request->year)) {
@@ -42,7 +44,7 @@ class SupervisionsController extends Controller
         SUM(tr_payment_details.nominal) as total_invoice
       ')
       ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
-      ->where('tr_invoices.periode_year', $year)
+	  ->whereBetween('tr_invoices.periode_date', [$year.'-7-1', ($year+1).'-6-30'])
       ->where('tr_payment_details.payments_id', $paymentId)
       ->where('tr_invoices.temps_id', 'like', $va.'%')
       ->groupBy('periode_month')
@@ -57,7 +59,7 @@ class SupervisionsController extends Controller
       ')
       ->join('tr_invoice_details', 'tr_invoice_details.invoices_id', 'tr_invoices.id')
       ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
-      ->where('tr_invoices.periode_year', $year)
+      ->whereBetween('tr_invoices.periode_date', [$year.'-7-1', ($year+1).'-6-30'])
       ->where('tr_payment_details.payments_id', $paymentId)
       ->where('tr_invoices.temps_id', 'like', $va.'%')
       ->where('tr_invoice_details.payments_type', '=', 'H2H')
