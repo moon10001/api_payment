@@ -106,7 +106,7 @@ class SupervisionsController extends Controller
         'pg' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
         'offline' => $outstandingDetails->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal'),
         'totalPayment' => $totalPayment
-      }
+      ];
     }
 
 	  $res = $outstandingData;
