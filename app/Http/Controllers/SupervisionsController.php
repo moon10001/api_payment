@@ -28,7 +28,7 @@ class SupervisionsController extends Controller
     public function post(Request $request) {
       $year = date('Y');
       $endYear = $year + 1;
-     
+
       $va = $request->va_code[0]['va_code'];
       $coa = $request->coa;
       if (isset($request->year)) {
@@ -37,35 +37,34 @@ class SupervisionsController extends Controller
       $prmPayments = $this->getPrmPayments();
       $paymentId = $prmPayments->where('coa', '=', $coa)->pluck('id')->first();
 
-	  $outstanding = DB::table('tr_invoices')
-	        ->selectRaw('
-	                periode_year,
-	                                SUM(tr_payment_details.nominal) as total_invoice
-	                                      ')
-	                                            ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
-	                                                  ->where('tr_invoices.periode_date', '>=', ($year-5).'-7-1')
-	                                                  ->where('tr_invoices.periode_date', '<=', $year.'-6-30')
-	                                                        ->where('tr_payment_details.payments_id', $paymentId)
-	                                                              ->where('tr_invoices.temps_id', 'like', $va.'%')
-	                                                                    ->groupBy('periode_year')
-	                                                                          ->get();
-	                                                                          
-	                                                                                $outstandingDetails = DB::table('tr_invoices')
-	                                                                                      ->selectRaw('
-	                                                                                              SUM(tr_payment_details.nominal) as total_nominal,
-	                                                                                                      tr_payment_details.payments_id,
-	                                                                                                                      tr_invoice_details.payments_type
-	                                                                                                                            ')
-	                                                                                                                                  ->join('tr_invoice_details', 'tr_invoice_details.invoices_id', 'tr_invoices.id')
-	                                                                                                                                        ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
-	                                                                                                                                              ->where('tr_invoices.periode_date', '>=', ($year-5).'-7-1')
-	                                                                                                                                              ->where('tr_invoices.periode_date', '<=', $year.'-6-30')
-	                                                                                                                                                    ->where('tr_payment_details.payments_id', $paymentId)
-	                                                                                                                                                          ->where('tr_invoices.temps_id', 'like', $va.'%')
-	                                                                                                                                                                ->where('tr_invoice_details.payments_type', '=', 'H2H')
-	                                                                                                                                                                      ->groupBy('periode_year', 'payments_type')
-	                                                                                                                                                                            ->get();
-	                                                                                                                                                                            
+	    $outstanding = DB::table('tr_invoices')
+      ->selectRaw('
+        periode_year,
+        SUM(tr_payment_details.nominal) as total_invoice
+      ')
+      ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
+      ->where('tr_invoices.periode_date', '>=', ($year-5).'-7-1')
+      ->where('tr_invoices.periode_date', '<=', $year.'-6-30')
+      ->where('tr_payment_details.payments_id', $paymentId)
+      ->where('tr_invoices.temps_id', 'like', $va.'%')
+      ->groupBy('periode_year')
+      ->get();
+
+      $outstandingDetails = DB::table('tr_invoices')
+      ->selectRaw('
+        SUM(tr_payment_details.nominal) as total_nominal,
+        tr_payment_details.payments_id,
+        tr_invoice_details.payments_type
+      ')
+      ->join('tr_invoice_details', 'tr_invoice_details.invoices_id', 'tr_invoices.id')
+      ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
+      ->where('tr_invoices.periode_date', '>=', ($year-5).'-7-1')
+      ->where('tr_invoices.periode_date', '<=', $year.'-6-30')
+      ->where('tr_payment_details.payments_id', $paymentId)
+      ->where('tr_invoices.temps_id', 'like', $va.'%')
+      ->groupBy('periode_year', 'payments_type')
+      ->get();
+
 
       $q = DB::table('tr_invoices')
       ->selectRaw('
@@ -74,7 +73,7 @@ class SupervisionsController extends Controller
         SUM(tr_payment_details.nominal) as total_invoice
       ')
       ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
-	  ->whereBetween('tr_invoices.periode_date', [$year.'-7-1', ($year+1).'-6-30'])
+	    ->whereBetween('tr_invoices.periode_date', [$year.'-7-1', ($year+1).'-6-30'])
       ->where('tr_payment_details.payments_id', $paymentId)
       ->where('tr_invoices.temps_id', 'like', $va.'%')
       ->groupBy('periode_month')
@@ -92,7 +91,6 @@ class SupervisionsController extends Controller
       ->whereBetween('tr_invoices.periode_date', [$year.'-7-1', ($year+1).'-6-30'])
       ->where('tr_payment_details.payments_id', $paymentId)
       ->where('tr_invoices.temps_id', 'like', $va.'%')
-      ->where('tr_invoice_details.payments_type', '=', 'H2H')
       ->groupBy('periode_month', 'payments_type')
       ->get();
 
@@ -105,7 +103,7 @@ class SupervisionsController extends Controller
 	  	'offline' => $details->where('payments_type', '=', 'Offline')->sum('total_nominal'),
 	  	'totalPayment' => $details->sum('total_nominal'),
 	  ];
-	  
+
 	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
 
       foreach($q as $o) {
