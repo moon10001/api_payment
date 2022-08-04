@@ -10,14 +10,9 @@ use Carbon\Carbon;
 class ReconcilePaymentJob extends Job
 {
     protected $invoicesIds = [];
-    protected $date;
 
-    public function __construct($date = '') {
-      if ($date != '') {
-        $this->date = $date;
-      } else {
-        $this->date = date('Y-m-d');
-      }
+    public function __construct($invoicesIds) {
+      $this->invoicesIds = $invoicesIds;
     }
     /**
      * Execute the job.
@@ -27,107 +22,60 @@ class ReconcilePaymentJob extends Job
     public function handle()
     {
       try {
-        //$date = date("Y-m-d");
+        $date = date("Y-m-d");
         $unitsVA = Cache::get('prm_va', function() {
-          $res = DB::table('prm_va')->where('va_code', '<>', '""')->get();
+          $res = DB::table('prm_va')->get();
           return $res;
         });
 
 	    DB::enableQueryLog();
+        $transactions = DB::table('mt940')
+        ->select(
+          'mt940.payment_date',
+          'prm_payments.id',
+          'prm_va.unit_id',
+          DB::raw(
+            'SUM(tr_payment_details.nominal) as nominal'
+          ),
+          DB::raw('NOW()'),
+          DB::raw('NOW()')
+        )
+        ->join('prm_va', function($join) {
+          $join->on('mt940.va', 'like', DB::raw('CONCAT(prm_va.va_code, "%")'));
+        })
+	    ->join('tr_payment_details', function($join) {
+          $join->on('tr_payment_details.invoices_id', '=', DB::raw('CONCAT("INV-", mt940.temps_id, DATE_FORMAT(STR_TO_DATE(mt940.periode_from, "%m%y"), "%y%m"))'));
+       	})
+        ->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
+        ->whereRaw('DATE(mt940.created_at) = ?', $date)
+        ->groupBy('prm_va.va_code', 'mt940.payment_date', 'prm_payments.id')
+        ->orderBy('mt940.payment_date', 'ASC');
 
-	    $mt = DB::table('mt940')
-	    ->where('payment_date', $this->date)
-	    ->get();
-
-	    foreach($unitsVA as $va) {
+        DB::table('daily_reconciled_reports')->insertUsing([
+        	'payment_date', 'prm_payments_id', 'units_id', 'nominal', 'created_at', 'updated_at'
+        ], $transactions);
+        /*
+        foreach($unitsVA as $va) {
           if (empty($va->va_code)) {
-             continue;
+            continue;
           }
-          $filteredTransactions = $mt->filter(function($transaction) use ($va) {
+          $filteredTransactions = $transactions->filter(function($transaction) use ($va) {
             return str_starts_with($transaction->va, $va->va_code);
           });
-          if ($filteredTransactions->isNotEmpty()) {
-          	foreach($filteredTransactions as $item) {
-	    		    $paymentDetails = DB::table('tr_payment_details')
-	    		    ->select(
-    	    			'prm_payments.id',
-    	    			'tr_payment_details.nominal',
-    	    			'prm_payments.coa',
-    	    			'prm_payments.name'
-    	    		)
-    	    		->join('prm_payments', 'prm_payments.id', 'tr_payment_details.payments_id')
-    	    		->join('tr_invoices' , 'tr_payment_details.invoices_id', '=', 'tr_invoices.id')
-    	    		->where('temps_id', $item->temps_id)
-    	    		->whereRaw(
-                'IF(CHAR_LENGTH(tr_invoices.periode) = 4, tr_invoices.periode_date BETWEEN ? and ?, tr_invoices.periode = ?)',
-                [$item->periode_date_from, $item->periode_date_to, $item->periode_from]
-              )
-              ->whereRaw('DATE(tr_invoices.payments_date) = ?', [$item->payment_date])
-    	    		->get();
-  	       		foreach($paymentDetails as $transaction) {
-  	              DB::table('daily_reconciled_reports')->insert([
-  	                'units_id' => $va->unit_id,
-  	                'payment_date' => $item->payment_date,
-  	                'prm_payments_id' => $transaction->id,
-  	                'nominal' => $transaction->nominal,
-  	                'updated_at' => Carbon::now(),
-  	                'coa' => $transaction->coa,
-  	                'description' => $transaction->name
-  	              ]);
-  	          }
-  	            //var_dump(DB::getQueryLog());
-  	        }
-	    	 }
-	     }
-        //$transactions = DB::table('mt940')
-        //->select(
-        //  'mt940.created_at',
-        //  'mt940.va',
-        //  'prm_payments.id',
-        //  'prm_payments.coa',
-        //  'prm_payments.name',
-        //  DB::raw(
-        //    'SUM(tr_payment_details.nominal) as nominal'
-        //  ),
-        //  DB::raw('NOW()'),
-        //  DB::raw('NOW()')
-        //)
-        //->join('tr_invoices', function($join) {
-        //  $join->on('tr_invoices.temps_id','=','mt940.temps_id');
-        //  $join->on('tr_invoices.periode_date', '>=', 'mt940.periode_date_from');
-        //  $join->on('tr_invoices.periode_date', '<=', 'mt940.periode_date_to');
-        //})
-        //->join('tr_payment_details', 'tr_invoices.id', 'tr_payment_details.invoices_id')
-        //->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-        //->whereRaw('DATE(mt940.created_at) = ?', $this->date)
-        //->groupBy('mt940.created_at', 'mt940.va', 'prm_payments.id')
-        //->orderBy('mt940.created_at', 'ASC')
-        //->orderBy('mt940.va', 'ASC')
-        //->orderBy('tr_payment_details.periode', 'ASC')
-        //->get();
 
-        //foreach($unitsVA as $va) {
-        //  if (empty($va->va_code)) {
-        //    continue;
-        //  }
-        //  $filteredTransactions = $transactions->filter(function($transaction) use ($va) {
-        //    return str_starts_with($transaction->va, $va->va_code);
-        //  });
-        //  if ($filteredTransactions->isNotEmpty()) {
-        //    foreach($filteredTransactions as $transaction) {
-        //      DB::table('daily_reconciled_reports')->insert([
-        //        'units_id' => $va->unit_id,
-        //        'payment_date' => $transaction->created_at,
-        //        'prm_payments_id' => $transaction->id,
-        //        'nominal' => $transaction->nominal,
-        //        'updated_at' => Carbon::now(),
-        //        'coa' => $transaction->coa,
-        //        'description' => $transaction->name
-        //      ]);
-        //    }
-        //    //var_dump(DB::getQueryLog());
-        //  }
-        //}
+          if ($filteredTransactions->isNotEmpty()) {
+            foreach($filteredTransactions as $transaction) {
+              DB::table('daily_reconciled_reports')->insert([
+                'units_id' => $va->unit_id,
+                'payment_date' => $transaction->payment_date,
+                'prm_payments_id' => $transaction->id,
+                'nominal' => $transaction->nominal,
+                'updated_at' => Carbon::now(),
+              ]);
+            }
+          }
+          var_dump($va->va_code, $filteredTransactions);
+        }*/
       } catch (Exception $e) {
         throw $e;
       }
