@@ -83,7 +83,7 @@ class ImportMT940Job extends Job
       $toYear = substr($data['periode_to'], 2, 2);
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
-      
+
       echo('Inserting MT940'."\n");
       echo('---VA          : '.$data['va']."\n");
       echo('---Temps ID    : '.$data['temps_id']."\n");
@@ -113,8 +113,8 @@ class ImportMT940Job extends Job
 
     private function fileHasBeenImported($filename) {
     	$res = DB::table('mt940_import_log')
-    	->where('filename', $filename)
-    	->where('status', 'PROCESSED')
+    	->where('filename', '"'.$filename.'"')
+    	->where('status', '"'.'PROCESSED'.'"')
     	->get();
       echo('Imported: '.($res->count() >= 1)."\n");
     	return $res->count() >= 1;

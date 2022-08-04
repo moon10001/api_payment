@@ -19,15 +19,13 @@ class ImportController extends BaseController
 
     public function import() {
       $date = date('Y-m-d');
-      $this->dispatch(
-        (new ImportMT940Job)
-        ->chain([
-          new ReconcilePaymentJob($date),
-          new UpdateTransactionsTableJob($date),
-        ]))->delay(Carbon::now()->addMinutes(1))
-      );
+      $this->dispatch((new ImportMT940Job))
+      ->chain([
+        new ReconcilePaymentJob($date),
+        new UpdateTransactionsTableJob($date)
+      ])->delay(Carbon::now()->addMinutes(1));
       return response()->json([
-        'message': 'Success'
+        'message' => 'Success'
       ]);
     }
 }
