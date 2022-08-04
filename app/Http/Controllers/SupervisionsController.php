@@ -123,30 +123,38 @@ class SupervisionsController extends Controller
   	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
       foreach($months as $m) {
         $filtered = $q->where('periode_month', $m)->first();
-        $resIndex = $res->search(function($item, $key) use($m) {
-          return $item->month == $m;
-        });
-        if (!$resIndex) {
-          $res[$resIndex] = [
-            'month' => $m
+        $data = $res->where('month', '=', $m)->first();
+        
+        if (!$data) {
+          $data= [
+            'month' => $m,
             'total' => $filtered->total_invoice,
             'outstanding' => 0,
             'h2h' => 0,
             'pg' => 0,
             'offline' => 0,
             'totalPayment' => 0,
-         ];
+           ];
+           $res->push($data);
         }
-        $res[$resIndex]['h2h'] = $details->where('payments_type', 'H2H')->where('periode_month', $m)->pluck('total_nominal');
-        $res[$resIndex]['pg'] = $details->where('payments_type', 'Faspay')->where('periode_month', $m)->pluck('total_nominal');
-        $res[$resIndex]['offline'] = $details->where('payments_type', 'Offline')->where('periode_month', $m)->pluck('total_nominal');
-        $res[$resIndex]['totalPayment'] = $details->Where('periode_month', $m)->sum('total_nominal');
-        $res[$resIndex]['outstanding'] = $res[$resIndex]['total'] - $res[$resIndex]['totalPayment'];
+        $data['h2h'] = $details->where('payments_type', 'H2H')->where('periode_month', $m)->pluck('total_nominal');
+        $data['pg'] = $details->where('payments_type', 'Faspay')->where('periode_month', $m)->pluck('total_nominal');
+        $data['offline'] = $details->where('payments_type', 'Offline')->where('periode_month', $m)->pluck('total_nominal');
+        $data['totalPayment'] = $details->where('periode_month', $m)->sum('total_nominal');
+        $data['outstanding'] = $data['total'] - $data['totalPayment'];
+        
+        $res->transform(function($item, $key) use($m, $data) {
+        	if ($item['month'] == $m) {
+        		$item = $data;
+        	}
+        	return $item;
+        });
+        
       }
 
       return [
         'outstanding' => $outstandingData,
-      	'report' => $res,
+      	'report' => $res->toArray(),
       	'summary' => $summary,
       ];
     }
