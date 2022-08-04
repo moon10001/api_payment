@@ -123,14 +123,13 @@ class SupervisionsController extends Controller
   	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
       foreach($months as $m) {
         $filtered = $q->where('periode_month', $m)->first();
-      	$month = $o->periode_month;
         $resIndex = $res->search(function($item, $key) use($m) {
           return $item->month == $m;
         });
         if (!$resIndex) {
           $res[$resIndex] = [
             'month' => $m
-            'total' => $o->total_invoice,
+            'total' => $filtered->total_invoice,
             'outstanding' => 0,
             'h2h' => 0,
             'pg' => 0,
@@ -138,11 +137,11 @@ class SupervisionsController extends Controller
             'totalPayment' => 0,
          ];
         }
-        $res[$resIndex]['h2h'] = $details->where('payments_type', 'H2H')->where('periode_month', $month)->pluck('total_nominal');
-        $res[$resIndex]['pg'] = $details->where('payments_type', 'Faspay')->where('periode_month', $month)->pluck('total_nominal');
-        $res[$resIndex]['offline'] = $details->where('payments_type', 'Offline')->where('periode_month', $month)->pluck('total_nominal');
-        $res[$resIndex]['totalPayment'] = $details->Where('periode_month', $month)->sum('total_nominal');
-        $res[$resIndex]['outstanding'] = $res[$month]['total'] - $res[$month]['totalPayment'];  
+        $res[$resIndex]['h2h'] = $details->where('payments_type', 'H2H')->where('periode_month', $m)->pluck('total_nominal');
+        $res[$resIndex]['pg'] = $details->where('payments_type', 'Faspay')->where('periode_month', $m)->pluck('total_nominal');
+        $res[$resIndex]['offline'] = $details->where('payments_type', 'Offline')->where('periode_month', $m)->pluck('total_nominal');
+        $res[$resIndex]['totalPayment'] = $details->Where('periode_month', $m)->sum('total_nominal');
+        $res[$resIndex]['outstanding'] = $res[$resIndex]['total'] - $res[$resIndex]['totalPayment'];
       }
 
       return [
