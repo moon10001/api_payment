@@ -135,7 +135,7 @@ class SupervisionsController extends Controller
             'offline' => 0,
             'totalPayment' => 0,
            ];
-           $res->push($data);
+           $res->push($data);           
         }
         $data['h2h'] = $details->where('payments_type', 'H2H')->where('periode_month', $m)->pluck('total_nominal');
         $data['pg'] = $details->where('payments_type', 'Faspay')->where('periode_month', $m)->pluck('total_nominal');
@@ -156,6 +156,7 @@ class SupervisionsController extends Controller
         'outstanding' => $outstandingData,
       	'report' => $res->toArray(),
       	'summary' => $summary,
+      	'details' => $details
       ];
     }
 
