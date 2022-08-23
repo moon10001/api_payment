@@ -24,6 +24,8 @@ class SeedH2H extends Seeder
         $interval = DateInterval::createFromDateString('1 day');
         $period = new DatePeriod($begin, $interval, $end);
 
+$job = new ReconcilePaymentJob('2021-10-02');
+$job->handle();
         foreach ($period as $dt) {
 	      $job = new ReconcilePaymentJob($dt->format('Y-m-d'));
           $job->handle();

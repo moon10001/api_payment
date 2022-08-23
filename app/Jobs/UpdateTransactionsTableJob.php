@@ -112,7 +112,7 @@ class UpdateTransactionsTableJob extends Job
       ->where('journal_number', 'like', 'H2H%')
       ->distinct()
       ->get();
-      
+
       $count = $counter->count() + 1;
 
       $journalNumber = 'H2H';
@@ -175,7 +175,7 @@ class UpdateTransactionsTableJob extends Job
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $date,
-          'code_of_account' => $item->coa,
+          'code_of_account' => $this->paymentCoa[$item->name],
           'description' => $item->name,
           'credit' => null,
           'debit' => $item->nominal,
@@ -184,7 +184,7 @@ class UpdateTransactionsTableJob extends Job
           'created_at' => $timestamp,
           'updated_at' => $timestamp
         ]);
-        
+
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
