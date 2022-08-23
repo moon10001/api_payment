@@ -10,6 +10,7 @@ use Carbon\Carbon;
 class ReconcilePaymentJob extends Job
 {
     protected $invoicesIds = [];
+    protected $date;
 
     public function __construct($date = '') {
       if ($date != '') {
@@ -17,7 +18,6 @@ class ReconcilePaymentJob extends Job
       } else {
         $this->date = date('Y-m-d');
       }
-      var_dump(['date' => $date]);
     }
     /**
      * Execute the job.
@@ -27,9 +27,9 @@ class ReconcilePaymentJob extends Job
     public function handle()
     {
       try {
-        $date = date("Y-m-d");
+        //$date = date("Y-m-d");
         $unitsVA = Cache::get('prm_va', function() {
-          $res = DB::table('prm_va')->get();
+          $res = DB::table('prm_va')->where('va_code', '<>', '""')->get();
           return $res;
         });
 
@@ -46,36 +46,39 @@ class ReconcilePaymentJob extends Job
           $filteredTransactions = $mt->filter(function($transaction) use ($va) {
             return str_starts_with($transaction->va, $va->va_code);
           });
-
           if ($filteredTransactions->isNotEmpty()) {
           	foreach($filteredTransactions as $item) {
-	    		$paymentDetails = DB::table('tr_payment_details')
-	    		->select(
-	    			'prm_payments.id',
-	    			'tr_payment_details.nominal',
-	    			'prm_payments.coa',
-	    			'prm_payments.name'
-	    		)
-	    		->join('prm_payments', 'prm_payments.id', 'tr_payment_details.payments_id')
-	    		->join('tr_invoices' , 'tr_payment_details.invoices_id', '=', 'tr_invoices.id')
-	    		->where('temps_id', $item->temps_id)
-	    		->whereBetween('tr_invoices.periode_date', [$item->periode_date_from, $item->periode_date_to])
-	    		->get();
-	       		foreach($paymentDetails as $transaction) {
-	              DB::table('daily_reconciled_reports')->insert([
-	                'units_id' => $va->unit_id,
-	                'payment_date' => $item->payment_date,
-	                'prm_payments_id' => $transaction->id,
-	                'nominal' => $transaction->nominal,
-	                'updated_at' => Carbon::now(),
-	                'coa' => $transaction->coa,
-	                'description' => $transaction->name
-	              ]);
-	            }
-	            //var_dump(DB::getQueryLog());
-	          }
-	    	}
-	    }
+	    		    $paymentDetails = DB::table('tr_payment_details')
+	    		    ->select(
+    	    			'prm_payments.id',
+    	    			'tr_payment_details.nominal',
+    	    			'prm_payments.coa',
+    	    			'prm_payments.name'
+    	    		)
+    	    		->join('prm_payments', 'prm_payments.id', 'tr_payment_details.payments_id')
+    	    		->join('tr_invoices' , 'tr_payment_details.invoices_id', '=', 'tr_invoices.id')
+    	    		->where('temps_id', $item->temps_id)
+    	    		->whereRaw(
+                'IF(CHAR_LENGTH(tr_invoices.periode) = 4, tr_invoices.periode_date BETWEEN ? and ?, tr_invoices.periode = ?)',
+                [$item->periode_date_from, $item->periode_date_to, $item->periode_from]
+              )
+              ->whereRaw('DATE(tr_invoices.payments_date) = ?', [$item->payment_date])
+    	    		->get();
+  	       		foreach($paymentDetails as $transaction) {
+  	              DB::table('daily_reconciled_reports')->insert([
+  	                'units_id' => $va->unit_id,
+  	                'payment_date' => $item->payment_date,
+  	                'prm_payments_id' => $transaction->id,
+  	                'nominal' => $transaction->nominal,
+  	                'updated_at' => Carbon::now(),
+  	                'coa' => $transaction->coa,
+  	                'description' => $transaction->name
+  	              ]);
+  	          }
+  	            //var_dump(DB::getQueryLog());
+  	        }
+	    	 }
+	     }
         //$transactions = DB::table('mt940')
         //->select(
         //  'mt940.created_at',
