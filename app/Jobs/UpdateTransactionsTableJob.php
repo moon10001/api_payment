@@ -175,7 +175,7 @@ class UpdateTransactionsTableJob extends Job
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $date,
-          'code_of_account' => $this->paymentCoa[$item->name],
+          'code_of_account' => $item->coa,
           'description' => $item->name,
           'credit' => null,
           'debit' => $item->nominal,
