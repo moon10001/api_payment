@@ -12,7 +12,6 @@ class ReconcilePaymentJob extends Job
     protected $date;
 
     public function __construct($date = '') {
-      $this->invoicesIds = $invoicesIds;
       if ($date != '') {
         $this->date = $date;
       } else {
