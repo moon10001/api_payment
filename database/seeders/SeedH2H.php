@@ -25,10 +25,10 @@ class SeedH2H extends Seeder
         $period = new DatePeriod($begin, $interval, $end);
 
         foreach ($period as $dt) {
-	      $job = new ReconcilePaymentJob($dt->format('Y-m-d'));
-          $job->handle();
-//          $job = new UpdateTransactionsTableJob('','','',$dt->format('Y-m-d'));
+//	      $job = new ReconcilePaymentJob($dt->format('Y-m-d'));
 //          $job->handle();
+          $job = new UpdateTransactionsTableJob('','','',$dt->format('Y-m-d'));
+          $job->handle();
         }
     }
 }

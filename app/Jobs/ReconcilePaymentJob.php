@@ -37,6 +37,7 @@ class ReconcilePaymentJob extends Job
           'mt940.payment_date',
           'prm_payments.id',
           'prm_va.unit_id',
+          'prm_payments.coa',
           DB::raw(
             'SUM(tr_payment_details.nominal) as nominal'
           ),
@@ -72,6 +73,7 @@ class ReconcilePaymentJob extends Job
                 'units_id' => $va->unit_id,
                 'payment_date' => $transaction->payment_date,
                 'prm_payments_id' => $transaction->id,
+                'coa' => $transaction->coa,
                 'nominal' => $transaction->nominal,
                 'updated_at' => Carbon::now(),
               ]);
