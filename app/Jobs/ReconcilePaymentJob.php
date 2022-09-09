@@ -56,7 +56,7 @@ class ReconcilePaymentJob extends Job
         ->orderBy('mt940.payment_date', 'ASC');
 
         DB::table('daily_reconciled_reports')->insertUsing([
-        	'payment_date', 'prm_payments_id', 'units_id', 'nominal', 'created_at', 'updated_at'
+        	'payment_date', 'prm_payments_id', 'units_id', 'nominal', 'created_at', 'updated_at', 'coa'
         ], $transactions);
         /*
         foreach($unitsVA as $va) {
