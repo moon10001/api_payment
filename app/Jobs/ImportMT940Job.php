@@ -31,7 +31,7 @@ class ImportMT940Job extends Job
 
     private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
-      ->select('nominal', 'payments_date')
+      ->select('id', 'nominal', 'payments_date')
       ->where('id', $id)
       ->first();
 
@@ -94,8 +94,8 @@ class ImportMT940Job extends Job
       echo('---Diff        : '.$data['diff']."\n");
       echo('---Mismatch    : '.$data['mismatch']."\n");
 
-      DB::table('mt940')
-      ->insert([
+      $id = DB::table('mt940')
+      ->insertGetId([
         'va' => $data['va'],
         'temps_id' => $data['temps_id'],
         'periode_from' => $data['periode_from'],
@@ -109,6 +109,7 @@ class ImportMT940Job extends Job
         'created_at' => date('Y-m-d h:i:s'),
         'updated_at' => date('Y-m-d h:i:s')
       ]);
+      return $id;
     }
 
     private function fileHasBeenImported($filename) {
@@ -134,7 +135,9 @@ class ImportMT940Job extends Job
     public function insert($mt940) {
         foreach($mt940 as $data) {
             $trInvoice = $this->getTrInvoice($data['tr_invoices_id'], $data['temps_id']);
+            $trInvoiceIds = [];
             if ($trInvoice && !empty($trInvoice)) {
+              array_push($trInvoiceIds, $trInvoice->id);
               $sum = $trInvoice->nominal;
               $this->updateTrInvoice($data['tr_invoices_id'], $data['payments_date']);
               $this->insertTrInvoiceDetails($data['tr_invoices_id'], $data);
@@ -157,6 +160,7 @@ class ImportMT940Job extends Job
 
                 $trInvoice = $this->getTrInvoice($id);
                 if ($trInvoice) {
+                  array_push($trInvoiceIds, $trInvoice->id);
                   $sum = $trInvoice->nominal + $sum;
                   $this->updateTrInvoice($id, $data['payments_date']);
                   $this->insertTrInvoiceDetails($id, $data);
@@ -168,7 +172,8 @@ class ImportMT940Job extends Job
               'diff' => floatval($sum) - floatval($data['nominal']),
               'mismatch' => floatval($sum) !== floatval($data['nominal'])
             ]);
-            $this->insertMT940($data );
+            $id = $this->insertMT940($data);
+            DB::table('tr_invoices')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
         }
     }
 
