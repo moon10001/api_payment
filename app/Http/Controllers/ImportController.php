@@ -8,8 +8,8 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use App\Jobs\ImportMT940Job;
-use App\Jobs\ReconcilePaymentJob;
-use App\Jobs\UpdateTransactionsTableJob;
+//use App\Jobs\ReconcilePaymentJob;
+//use App\Jobs\UpdateTransactionsTableJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
@@ -21,10 +21,10 @@ class ImportController extends BaseController
       $date = date('Y-m-d');
       $this->dispatch(
       	(new ImportMT940Job)
-      		->chain([
-        		new ReconcilePaymentJob($date),
-        		new UpdateTransactionsTableJob($date)
-      		])
+      		//->chain([
+//        		new ReconcilePaymentJob($date),
+//        		new UpdateTransactionsTableJob($date)
+      		//])
       		->delay(
       			Carbon::now()->addMinutes(1)
       		)
