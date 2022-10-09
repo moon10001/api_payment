@@ -31,5 +31,18 @@ return [
             'prefix'    => '',
             'strict'    => false,
         ],
+        
+        'report_db' => [
+        	'driver'    => 'mysql',
+            'host'	=> env('REPORT_DB_HOST'),
+            'port'	=> env('REPORT_DB_PORT'),
+            'database'  => env('REPORT_DB_DATABASE'),
+            'username'  => env('REPORT_DB_USERNAME'),
+            'password'  => env('REPORT_DB_PASSWORD'),
+            'charset'   => 'utf8',
+            'collation' => 'utf8_unicode_ci',
+            'prefix'    => '',
+            'strict'    => false,                                                                                                        
+        ]
     ],
 ];

@@ -30,19 +30,17 @@ class ReconcilePaymentJob extends Job
 
         DB::enableQueryLog();
 	      
-       	$transactions = DB::table('mt940')
+       	$transactions = DB::connection('mysql')->table('mt940')
        	->select(
-       		'tr_invoices.payments_date',
-       		'prm_payments.id',
+       		'tr_invoices.payments_date as payment_date',
+       		'prm_payments.id as prm_payments_id',
        		DB::raw(
-       			'SUBSTR(mt940.temps_id, 1, 3) as unit_id'
+       			'SUBSTR(mt940.temps_id, 1, 3) as units_id'
        		),
        		DB::raw(
           		'SUM(tr_payment_details.nominal) as nominal'
        		),
-       		DB::raw('NOW()'),
-       		DB::raw('NOW()'),
-       		'prm_payments.coa'
+	        'prm_payments.coa as coa'
       	)
       	->join('tr_invoices', 'tr_invoices.mt940_id', 'mt940.id')
     	->join('tr_payment_details', function($join) {
@@ -51,12 +49,14 @@ class ReconcilePaymentJob extends Job
       	->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
       	->join('prm_va', 'prm_va.va_code', 'mt940.va_code')
        	->where('mt940.payment_date', $this->date)
-       	->groupBy('unit_id', 'mt940.payment_date', 'prm_payments.id', 'prm_payments.coa')
-       	->orderBy('mt940.payment_date', 'ASC');
+       	->groupBy('units_id', 'mt940.payment_date', 'prm_payments.id', 'prm_payments.coa')
+       	->orderBy('mt940.payment_date', 'ASC')->get();
        	
-        DB::table('daily_reconciled_reports')->insertUsing([
-   	    	'payment_date', 'prm_payments_id', 'units_id', 'nominal', 'created_at', 'updated_at', 'coa'
-       	], $transactions);
+		$arr = $transactions->map(function($o) { return (array) $o; })->toArray();
+
+      	DB::connection('report_db')->table('daily_reconciled_reports')->insert($arr);
+
+      	var_dump(DB::getQueryLog());
       } catch (Exception $e) {
         throw $e;
       }
