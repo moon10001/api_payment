@@ -81,9 +81,12 @@ class ReportController extends Controller
 
     public function recap(Request $request) {
       $vaCodes = [];
+      $unitIds = [];
+      $classroomsId = $request->class;
       $year = $request->year;
       $startYear = $request->year;
       $endYear = intval($startYear) + 1;
+      $periodsId = '';
       $periode = [
         '07'.$startYear,
         '08'.$startYear,
@@ -102,44 +105,64 @@ class ReportController extends Controller
         $vaCodes = collect($request->unit_id)->map(function($item) {
           return $item['va_code'];
         });
+        $units = DB::connection('auth')->table('units')
+        ->select('*')
+        ->whereIn('va_code', $vaCodes)
+        ->get();
+        $unitIds = $units->map(function($item) {
+        	return $item->id;
+        });
       }
       $classArray = $request->class;
       $class = '';
       $paralel = null;
       $jurusan = null;
 
-      if(isset($classArray)) {
-        $classArray = explode('_', $classArray);
-        $class = $classArray[0];
-        $paralel = isset($classArray[1]) ? $classArray[1] : null;
-        $jurusan = isset($classArray[2]) ? $classArray[2] : null;
-      }
-      $students = DB::table('ms_temp_siswa')
-      ->whereIn('units_id', $vaCodes)
-      ->where('class', $class)
-      ->where('paralel', $paralel)
-      ->where('jurusan', $jurusan)
-      ->orderBy('name')
+	  if ('20'.$year < date('Y')) {
+	  	$periodsId = DB::connection('academics')->table('periods')
+	  	->where('name_period', 'like', '20'.$year.'%')
+	  	->where('organizations_id', 3)
+	  	->first();
+	  }
+	      
+      $students = DB::connection('academics')->table('student_profile')
+      ->select('*', 'no_va as id', DB::raw('CONCAT(first_name, " ", last_name) as name'))
+      ->leftJoin('class_div', function($join) use($periodsId) {
+      	if ($periodsId != '') {
+      		$join->on('student_profile.id','=', 'class_div.students_id');
+      	} else {
+      		$join->on('periods_id', '=', 'student_profile.id');
+      	}
+      })
+      ->whereIn('student_profile.units_id', $unitIds)
+      ->where(function($query) use($year, $classroomsId, $periodsId) {
+      	if($periodsId == '') {
+      		$query->where('student_profile.classrooms_id', $classroomsId);
+      	} else {
+      		$query->where('class_div.classrooms_id', $classroomsId);
+      		$query->where('periods_id', $periodsId->id);
+      	}
+      })
+      ->distinct()
       ->get();
-      //return response()->json(['log' => DB::getQueryLog()]);
+      
       $monthlyTotal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
      
       $invoices = DB::table('tr_invoices')
       ->select(
         '*',
-	      'payments_date',
-        //DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
+        'payments_date',
         DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
         DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
         DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
       )
       ->whereBetween('periode_date', ['20'.$year.'-07-01', '20'.strval(intval($year)+1).'-06-01'])
-      ->whereIn('temps_id', $students->pluck('id')->toArray())
+      ->whereIn('temps_id', $students->pluck('no_va')->toArray())
       ->where('tr_invoices.id','like','INV-%')
       ->get();
 
 	  foreach($students as $key => &$item) {
-	  	$filteredInvoices = $invoices->where('temps_id', $item->id);
+	  	$filteredInvoices = $invoices->where('temps_id', $item->no_va);
         $mappedInvoices = $filteredInvoices->where('payments_date', '!=', null)
         	->groupBy('payment_month')
         	->mapWithKeys(function($item, $key) use(&$monthlyTotal) {

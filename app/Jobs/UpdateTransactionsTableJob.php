@@ -81,19 +81,16 @@ class UpdateTransactionsTableJob extends Job
       $data = [];
 
       DB::enableQueryLog();
-      $transactions = DB::table('daily_reconciled_reports')
-        ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
+      $transactions = DB::connection('report_db')->table('daily_reconciled_reports')
         ->whereRaw('DATE(daily_reconciled_reports.payment_date) = ?', $this->date)
         ->orderBy('units_id', 'ASC')
         ->get();
 
-	  var_dump(['transactions' => $transactions->count()]);
       if ($transactions->isNotEmpty()) {
         $data = $transactions->mapToGroups(function ($item, $key) {
           return [$item->units_id => $item];
         });
       }
-      var_dump(['grouped' => count($data)]);
 
       return $data;
     }
@@ -169,14 +166,19 @@ class UpdateTransactionsTableJob extends Job
       $sum = $items->sum('nominal');
       $timestamp = Carbon::now();
       $journalNumber = $this->generateJournalNumber($date, $unitId);
-
+	  $prmPaymentList = DB::table('prm_payments')->get();
+	  
       foreach($items as $item) {
+        $prmPayment = $prmPaymentList->first(function ($value, $key) use ($item) { 
+        	return $value->id == $item->prm_payments_id;
+        });
+        
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $date,
           'code_of_account' => $item->coa,
-          'description' => $item->name,
+          'description' => $prmPayment->name,
           'credit' => null,
           'debit' => $item->nominal,
           'units_id' => $unitId,
@@ -190,7 +192,7 @@ class UpdateTransactionsTableJob extends Job
           'journal_number' => $journalNumber,
           'date' => $date,
           'code_of_account' => '12902',
-          'description' => $item->name,
+          'description' => $prmPayment->name,
           'credit' => $item->nominal,
           'debit' => null,
           'units_id' => $unitId,
