@@ -18,19 +18,35 @@ class OptionsController extends Controller
 
     public function get(Request $request, $type) {
       $vaCodes = [];
-      $unitIds = [];
+      $unitIds = collect([]);
       
       if ($request->unit_id) {
         $vaCodes = collect($request->unit_id)->map(function($item) {
           return $item['va_code'];
         });
-        $unitIds = DB::connection('auth')->table('units')
+        $units = DB::connection('auth')->table('units')
         ->select('id')
-        ->whereIn('va_code', $vaCodes);
+        ->whereIn('va_code', $vaCodes)
+        ->get();
+        $unitIds = $units->map(function($item) {
+        	return $item->id;
+        });
       }
-      
      
       switch($type) {
+        case 'periods': 
+          $results = DB::connection('academics')->table('periods')
+          ->where('units_id', $unitIds)
+          ->get();
+          
+          $options = $results->map(function ($item, $key) {
+          	return [
+          		'value' => $item->id,
+          		'label' => $item->name_period
+          	];
+          });
+          return response()->json($options);
+          
         case 'va-code':
           $results = DB::table('ms_temp_siswa')
           ->select('*')

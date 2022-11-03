@@ -118,32 +118,21 @@ class ReportController extends Controller
       $paralel = null;
       $jurusan = null;
 
-	  if ('20'.$year < date('Y')) {
-	  	$periodsId = DB::connection('academics')->table('periods')
+	  $periodsId = DB::connection('academics')->table('periods')
 	  	->where('name_period', 'like', '20'.$year.'%')
+	  	->whereIn('units_id', $unitIds)
 	  	->where('organizations_id', 3)
-	  	->first();
-	  }
+	  	->first();	  
 	      
       $students = DB::connection('academics')->table('student_profile')
       ->select('*', 'no_va as id', DB::raw('CONCAT(first_name, " ", last_name) as name'))
-      ->leftJoin('class_div', function($join) use($periodsId) {
-      	if ($periodsId != '') {
-      		$join->on('student_profile.id','=', 'class_div.students_id');
-      	} else {
-      		$join->on('periods_id', '=', 'student_profile.id');
-      	}
-      })
+      ->join('class_div', 'class_div.students_id', 'student_profile.id')
       ->whereIn('student_profile.units_id', $unitIds)
-      ->where(function($query) use($year, $classroomsId, $periodsId) {
-      	if($periodsId == '') {
-      		$query->where('student_profile.classrooms_id', $classroomsId);
-      	} else {
-      		$query->where('class_div.classrooms_id', $classroomsId);
-      		$query->where('periods_id', $periodsId->id);
-      	}
-      })
-      ->distinct()
+      ->where('class_div.classrooms_id', $classroomsId)
+   	  ->where('periods_id', $periodsId->id)
+   	  ->where('class_div.is_active', 1)
+   	  ->orderBy('student_profile.first_name', 'asc')
+   	  ->orderBy('student_profile.last_name', 'asc')
       ->get();
       
       $monthlyTotal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -185,6 +174,7 @@ class ReportController extends Controller
 
       return response()->json([
         'data' => $students,
+        'periods' => $periodsId,
         'total_monthly' => $monthlyTotal,
         'total_payments' => $students->sum('total_payments'),
         'total_invoices' => $students->sum('total_invoices'),
