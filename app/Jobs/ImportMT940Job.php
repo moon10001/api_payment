@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -114,8 +116,8 @@ class ImportMT940Job extends Job
 
     private function fileHasBeenImported($filename) {
     	$res = DB::table('mt940_import_log')
-    	->where('filename', '"'.$filename.'"')
-    	->where('status', '"'.'PROCESSED'.'"')
+    	->where('filename', $filename)
+    	->where('status', 'PROCESSED')
     	->get();
       echo('Imported: '.($res->count() >= 1)."\n");
     	return $res->count() >= 1;
