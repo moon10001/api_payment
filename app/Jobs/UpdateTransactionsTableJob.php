@@ -64,9 +64,9 @@ class UpdateTransactionsTableJob extends Job
       try {
         $data = $this->getReconciliatedData();
         foreach($data as $unitId => $payment) {
-          $unitId = $unitId;
           $transactions = collect($payment);
           $date = $this->date;
+          var_dump($unitId);
           $this->createReconciliation($unitId, $date, $transactions);
         }
       } catch (Exception $e) {

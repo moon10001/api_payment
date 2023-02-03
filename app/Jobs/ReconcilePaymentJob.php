@@ -51,7 +51,15 @@ class ReconcilePaymentJob extends Job
        	->groupBy('units_id', 'mt940.payment_date', 'prm_payments.id', 'prm_payments.coa')
        	->orderBy('mt940.payment_date', 'ASC')->get();
        	
-		$arr = $transactions->map(function($o) { return (array) $o; })->toArray();
+       	$fixedTransactions = $transactions->map(function ($item, $key) use ($unitsVA) {
+       		$va = $unitsVA->first(function ($value, $key) use ($item)  {
+       			return $value->va_code == $item->units_id;
+       		});
+       		$item->units_id = $va->unit_id;
+       		return $item;
+       	});
+       	
+		$arr = $fixedTransactions->map(function($o) { return (array) $o; })->toArray();
 
       	DB::connection('report_db')->table('daily_reconciled_reports')->insert($arr);
 
