@@ -29,6 +29,6 @@ class Kernel extends ConsoleKernel
     {
         $schedule->exec('echo RUNNING')->everyMinute();
 //        $schedule->command('queue:work')->dailyAt('07:40');
-        $schedule->job(new ReconcilePaymentJob())->cron('0 1 * * *');
+        $schedule->job(new ReconcilePaymentJob())->cron('* 1 * * *');
     }
 }

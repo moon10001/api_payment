@@ -6,13 +6,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-class UpdateTransactionsTableJob extends Job
+class ExportPGToJournalsJob extends Job
 {
     private $date;
-    private $from;
-    private $to;
-    private $unitId;
-    private $bankCoa = '11310';
+    private $units;
+    private $bankCoa = '11301';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
     private $paymentCoa = [
@@ -41,20 +39,17 @@ class UpdateTransactionsTableJob extends Job
      *
      * @return void
      */
-    public function __construct($from = '', $to = '', $unitId = '', $date = '')
+    public function __construct($date = '')
     {
-        $this->from = $from;
-        $this->to = $to;
-        $this->unitId = $unitId;
+    	$this->units = DB::table('api_kliksekolah.prm_school_units')->get();
         if($date != '') {
           $this->date = $date;
         } else {
           $this->date = date('Y-m-d');
         }
-        var_dump($date);
     }
 
-     /**
+    /**
      * Execute the job.
      *
      * @return void
@@ -64,7 +59,6 @@ class UpdateTransactionsTableJob extends Job
       try {
         $data = $this->getReconciliatedData();
         foreach($data as $unitId => $payment) {
-          $unitId = $unitId;
           $transactions = collect($payment);
           $date = $this->date;
           $this->createReconciliation($unitId, $date, $transactions);
@@ -76,25 +70,37 @@ class UpdateTransactionsTableJob extends Job
 
 
     public function getReconciliatedData() {
-      $unitId = $this->unitId;
-
       $data = [];
 
       DB::enableQueryLog();
-      $transactions = DB::table('daily_reconciled_reports')
-        ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
-        ->whereRaw('DATE(daily_reconciled_reports.payment_date) = ?', $this->date)
-        ->orderBy('units_id', 'ASC')
-        ->get();
+	  $transactions = collect(DB::select(DB::raw('
+	  	SELECT
+	  		DATE(tr_faspay.settlement_date) as payment_date,
+	  		tr_invoices.va_code,
+	  		prm_va.unit_id as units_id,
+	  		prm_payments.name as description,
+	  		prm_payments.coa,
+	  		SUM(tr_invoices.nominal) as nominal
+	  	FROM
+	  	  	tr_faspay
+	  	INNER JOIN
+	  		tr_invoices on tr_invoices.faspay_id = tr_faspay.id
+	  	INNER JOIN
+	  		tr_payment_details on tr_payment_details.invoices_id = tr_invoices.id
+	  	INNER JOIN
+	  		prm_payments on prm_payments.id = tr_payment_details.payments_id
+	  	INNER JOIN
+	  		api_kliksekolah.prm_va on prm_va.va_code = tr_invoices.va_code
+	  	WHERE DATE(tr_faspay.settlement_date) = "' . $this->date . '"
+	  	GROUP BY tr_invoices.va_code, tr_payment_details.payments_id
+	  	ORDER BY tr_invoices.va_code ASC
+	  ')));
 
-	  var_dump(['transactions' => $transactions->count()]);
       if ($transactions->isNotEmpty()) {
         $data = $transactions->mapToGroups(function ($item, $key) {
           return [$item->units_id => $item];
         });
       }
-      var_dump(['grouped' => count($data)]);
-
       return $data;
     }
 
@@ -102,20 +108,20 @@ class UpdateTransactionsTableJob extends Job
       $month = date('m', strtotime($date));
       $year = date('Y', strtotime($date));
       $shortYear = date('y', strtotime($date));
-      $unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
+      $unit = $this->units->where('id', $unitId)->first();
 
       $counter = DB::connection('finance_db')->table('journal_logs')
       ->select('journal_number')
       ->whereRaw('MONTH(date) = ?', $month)
       ->whereRaw('YEAR(date) = ?', $year)
       ->whereRaw('units_id = ?', $unitId)
-      ->where('journal_number', 'like', 'H2H%')
+      ->where('journal_number', 'like', 'PG%')
       ->distinct()
       ->get();
-      
+
       $count = $counter->count() + 1;
 
-      $journalNumber = 'H2H';
+      $journalNumber = 'PG';
       $journalNumber = $journalNumber . $shortYear . str_pad($month, 2, '0', STR_PAD_LEFT) . str_pad($count, 3, '0', STR_PAD_LEFT) . $unit->unit_code;
 
       return $journalNumber;
@@ -137,61 +143,36 @@ class UpdateTransactionsTableJob extends Job
         ]);
     }
 
-    private function createTransaction($unitId, $date, $items) {
-      $journal = [
-        'journal_number' => $this->generateJournalNumber($date, $unitId),
-        'journal_date' => $date,
-        'units_id' => $unitId,
-        'nominal' => $items->sum('nominal'),
-        'created_at' => Carbon::now(),
-        'updated_at' => Carbon::now()
-      ];
-
-      $journalId = DB::connection('finance_db')->table('journal_h2h')
-      ->insertGetId($journal);
-
-      $details = [];
-      foreach($items as $item) {
-        $coa = $this->paymentCoa[$item->name];
-        array_push($details, [
-          'journal_h2h_id' => $journalId,
-          'code_of_account' => $coa,
-          'nominal' => $item->nominal,
-          'created_at' => Carbon::now(),
-          'updated_at' => Carbon::now()
-        ]);
-      }
-
-      DB::connection('finance_db')->table('journal_h2h_details')->insert($details);
-    }
-
     private function createReconciliation($unitId, $date, $items) {
       $sum = $items->sum('nominal');
       $timestamp = Carbon::now();
       $journalNumber = $this->generateJournalNumber($date, $unitId);
-
+	  $prmPaymentList = DB::table('prm_payments')->get();
+	  $unit = $this->units->where('id', $unitId)->first();
       foreach($items as $item) {
+        $description = $item->description;
+        $nominal = $item->nominal;
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $date,
           'code_of_account' => $item->coa,
-          'description' => $item->name,
+          'description' => $description,
           'credit' => null,
-          'debit' => $item->nominal,
+          'debit' => $nominal,
           'units_id' => $unitId,
           'countable' => 1,
           'created_at' => $timestamp,
           'updated_at' => $timestamp
         ]);
-        
+
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $date,
           'code_of_account' => '12902',
-          'description' => $item->name,
-          'credit' => $item->nominal,
+          'description' => $description,
+          'credit' => $nominal,
           'debit' => null,
           'units_id' => $unitId,
           'countable' => 1,
@@ -205,8 +186,8 @@ class UpdateTransactionsTableJob extends Job
         'journal_id' => 0,
         'journal_number' => $journalNumber,
         'date' => $date,
-        'code_of_account' => '11310',
-        'description' => 'Rekonsiliasi H2H',
+        'code_of_account' => '11301',
+        'description' => 'Rekonsiliasi PG - '. $unit->name,
         'credit' => $sum,
         'debit' => null,
         'units_id' => 95,
@@ -219,7 +200,7 @@ class UpdateTransactionsTableJob extends Job
         'journal_number' => $journalNumber,
         'date' => $date,
         'code_of_account' => '12902',
-        'description' => 'Rekonsiliasi H2H',
+        'description' => 'Rekonsiliasi PG - '. $unit->name,
         'credit' => null,
         'debit' => $sum,
         'units_id' => 95,

@@ -18,5 +18,6 @@ class DatabaseSeeder extends Seeder
         // $this->call('UsersTableSeeder');
         //$this->call([SeedDailyReconciliationReports::class]);
         $this->call(SeedH2H::class);
+        $this->call(SeedPG::class);
     }
 }

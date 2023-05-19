@@ -19,7 +19,7 @@ class ReportController extends Controller
     public function get(Request $request) {
       DB::enableQueryLog();
       $startYear = $request->year;
-      $endYear = intval($startYear) + 1;
+      $endYear = str_pad(intval($startYear) + 1, 2, "0");
       $periode = [
         '07'.$startYear,
         '08'.$startYear,
@@ -43,7 +43,7 @@ class ReportController extends Controller
       $invoices = DB::table('tr_invoices')
       ->select(
         '*',
-        DB::raw('SUBSTR(periode, 1, 2) as periode_month'),
+        DB::raw('MONTH(periode_date) as periode_month'),
         DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date')
       )
       ->whereIn('periode', $periode)
@@ -83,23 +83,24 @@ class ReportController extends Controller
       $vaCodes = [];
       $unitIds = [];
       $classroomsId = $request->class;
-      $year = $request->year;
-      $startYear = $request->year;
+      $year = str_pad($request->year, 2, "0", STR_PAD_LEFT);
+      $year2 = str_pad(intval($year) + 1, 2, "0", STR_PAD_LEFT);
+      $startYear = '2' . str_pad($year, 3, "0", STR_PAD_LEFT);
       $endYear = intval($startYear) + 1;
       $periodsId = '';
       $periode = [
-        '07'.$startYear,
-        '08'.$startYear,
-        '09'.$startYear,
-        '10'.$startYear,
-        '11'.$startYear,
-        '12'.$startYear,
-        '01'.$endYear,
-        '02'.$endYear,
-        '03'.$endYear,
-        '04'.$endYear,
-        '05'.$endYear,
-        '06'.$endYear,
+        '07'.$year,
+        '08'.$year,
+        '09'.$year,
+        '10'.$year,
+        '11'.$year,
+        '12'.$year,
+        '01'.$year2,
+        '02'.$year2,
+        '03'.$year2,
+        '04'.$year2,
+        '05'.$year2,
+        '06'.$year2,
       ];
       if ($request->unit_id) {
         $vaCodes = collect($request->unit_id)->map(function($item) {
@@ -119,13 +120,13 @@ class ReportController extends Controller
       $jurusan = null;
 
 	  $periodsId = DB::connection('academics')->table('periods')
-	  	->where('name_period', 'like', '20'.$year.'%')
+	  	->where('name_period', 'like', $startYear.'%')
 	  	->whereIn('units_id', $unitIds)
 	  	->where('organizations_id', 3)
 	  	->first();	  
 	      
       $students = DB::connection('academics')->table('student_profile')
-      ->select('*', 'no_va as id', DB::raw('CONCAT(first_name, " ", last_name) as name'))
+      ->select('no_va', 'no_va as id', DB::raw('CONCAT(first_name, " ", last_name) as name'))
       ->join('class_div', 'class_div.students_id', 'student_profile.id')
       ->whereIn('student_profile.units_id', $unitIds)
       ->where('class_div.classrooms_id', $classroomsId)
@@ -143,16 +144,31 @@ class ReportController extends Controller
         'payments_date',
         DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
         DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
+        DB::raw('YEAR(payments_date) as payment_year'),
         DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
       )
-      ->whereBetween('periode_date', ['20'.$year.'-07-01', '20'.strval(intval($year)+1).'-06-01'])
+      ->whereBetween('periode_date', [$startYear.'-07-01', $endYear.'-06-01'])
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
       ->where('tr_invoices.id','like','INV-%')
+      ->get();
+      
+      $outstanding = DB::table('tr_invoices')
+      ->select(
+      	DB::raw('SUM(nominal) as total'),
+      	'temps_id'
+      )
+      ->whereIn('temps_id', $students->pluck('no_va')->toArray())
+      ->where('periode_date', '<', $startYear.'-07-01')
+      ->whereNull('payments_date')
+      ->where('id', 'like', 'INV-%')
+      ->groupBy('temps_id')
       ->get();
 
 	  foreach($students as $key => &$item) {
 	  	$filteredInvoices = $invoices->where('temps_id', $item->no_va);
+	  	$filteredOutstanding = $outstanding->where('temps_id', $item->no_va);
         $mappedInvoices = $filteredInvoices->where('payments_date', '!=', null)
+        	->whereBetween('payment_year', [$startYear, $endYear]) 
         	->groupBy('payment_month')
         	->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
           		$timestamp = strtotime($key);
@@ -170,14 +186,17 @@ class ReportController extends Controller
         $item->total_invoices = $filteredInvoices->sum('total');
         $item->total_payments = $mappedInvoices->sum();
         $item->diff = $item->total_invoices - $item->total_payments;
+        $item->total_outstanding = !$filteredOutstanding->isEmpty() ? $filteredOutstanding->sum('total') : 0;
       };
 
       return response()->json([
         'data' => $students,
+        'outstanding' => $outstanding,
         'periods' => $periodsId,
         'total_monthly' => $monthlyTotal,
         'total_payments' => $students->sum('total_payments'),
         'total_invoices' => $students->sum('total_invoices'),
+        'total_outstanding' => $students->sum('total_outstanding'),
         'total_diff' => $students->sum('diff'),
       ]);
     }
