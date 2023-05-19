@@ -34,13 +34,15 @@ class ReportController extends Controller
         '05'.$endYear,
         '06'.$endYear,
       ];
+      
+     $periodeMonth = [7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
 
       $student = DB::table('ms_temp_siswa')
       ->select('id', 'name', 'class', 'paralel', 'jurusan')
       ->where('id', $request->va_code)
       ->first();
 
-      $invoices = DB::table('tr_invoices')
+      $invoicesRes = DB::table('tr_invoices')
       ->select(
         '*',
         DB::raw('MONTH(periode_date) as periode_month'),
@@ -49,13 +51,23 @@ class ReportController extends Controller
       ->whereIn('periode', $periode)
       ->where('temps_id', $request->va_code)
       ->get();
+      
+      $invoices = [];
+      
+	  foreach($periodeMonth as $month) {
+	  	$res = $invoicesRes->where('periode_month', $month)->first();
+	  	if ($res) {
+	  		array_push($invoices, $res);
+	  	}
+	  }
+	  
 
       $liabilities = [];
       $lastInvoice = [];
-      $lastPaidInvoice = $invoices->whereNotNull('payments_date')->last();
+      $lastPaidInvoice = $invoicesRes->whereNotNull('payments_date')->last();
       if ($lastPaidInvoice) {
       	$nextPaymentMonth = $lastPaidInvoice->periode_month == 12 ? 1 : intval($lastPaidInvoice->periode_month) + 1;
-      	$lastInvoice= $invoices->whereNull('payments_date')->where('periode_month', '=', $nextPaymentMonth)->first();
+      	$lastInvoice= $invoicesRes->whereNull('payments_date')->where('periode_month', '=', $nextPaymentMonth)->first();
       	if ($lastInvoice) {
         	$liabilities = DB::table('tr_payment_details')
         	->select(
@@ -73,9 +85,10 @@ class ReportController extends Controller
       return response()->json([
         'student' => $student,
         'invoices' => $invoices,
+        'periodeMonth' => $periodeMonth,
         'liabilities' => $liabilities,
-	'lastInvoice' => $lastInvoice,
-	'lastPaidInvoice' => $lastPaidInvoice,
+		'lastInvoice' => $lastInvoice,
+		'lastPaidInvoice' => $lastPaidInvoice,
       ]);
     }
 
