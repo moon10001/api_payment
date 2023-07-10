@@ -6,6 +6,7 @@ use DateTime;
 use DatePeriod;
 use DateInterval;
 use Illuminate\Database\Seeder;
+use App\Jobs\ImportFaspayJob;
 use App\Jobs\ExportPGToJournalsJob;
 
 class SeedPG extends Seeder
@@ -17,11 +18,14 @@ class SeedPG extends Seeder
      */
     public function run()
     {
-        $begin = new DateTime('2023-04-29');
-        $end = new DateTime('2023-05-16');
+        $begin = new DateTime('2023-02-02');
+        $end = new DateTime('2023-07-07');
 
         $interval = DateInterval::createFromDateString('1 day');
         $period = new DatePeriod($begin, $interval, $end);
+		
+//		$updateStatementDateJob = new ImportFaspayJob();
+//		$updateStatementDateJob->handle();
 
         foreach ($period as $dt) {
           $job = new ExportPGToJournalsJob($dt->format('Y-m-d'));

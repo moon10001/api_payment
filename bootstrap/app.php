@@ -70,6 +70,7 @@ $app->singleton('filesystem', function ($app) {
 */
 
 $app->configure('app');
+$app->configure('cors');
 $app->configure('filesystems');
 $app->configure('tinker');
 $app->configure('database');
@@ -88,7 +89,8 @@ $app->configure('queue');
 
 $app->middleware([
   //  App\Http\Middleware\ExampleMiddleware::class
- App\Http\Middleware\CorsMiddleware::class
+  //App\Http\Middleware\CorsMiddleware::class
+  Fruitcake\Cors\HandleCors::class
 ]);
 
 // $app->routeMiddleware([

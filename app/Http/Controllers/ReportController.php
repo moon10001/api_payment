@@ -144,13 +144,28 @@ class ReportController extends Controller
       ->whereIn('student_profile.units_id', $unitIds)
       ->where('class_div.classrooms_id', $classroomsId)
    	  ->where('periods_id', $periodsId->id)
-   	  ->where('class_div.is_active', 1)
+   	  //->where('class_div.is_active', 1)
    	  ->orderBy('student_profile.first_name', 'asc')
    	  ->orderBy('student_profile.last_name', 'asc')
       ->get();
       
       $monthlyTotal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-     
+
+	  $expected = DB::table('tr_invoices')
+	  ->select(
+	      '*',
+	      'payments_date',
+	      DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
+	      DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
+	      DB::raw('YEAR(payments_date) as payment_year'),
+	      DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
+	   )
+	  ->whereBetween('periode_date', [$startYear.'-07-01', $endYear.'-06-31'])
+	  ->whereIn('temps_id', $students->pluck('no_va')->toArray())
+	  ->where('tr_invoices.id','like','INV-%')
+	  ->orderBy('periode_date', 'ASC')
+	  ->get();
+	          	                                                                   
       $invoices = DB::table('tr_invoices')
       ->select(
         '*',
@@ -160,7 +175,7 @@ class ReportController extends Controller
         DB::raw('YEAR(payments_date) as payment_year'),
         DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
       )
-      ->whereBetween('periode_date', [$startYear.'-07-01', $endYear.'-06-01'])
+      ->whereRaw('DATE(payments_date) between ? and ?', [$startYear.'-07-01', $endYear.'-06-31'])
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
       ->where('tr_invoices.id','like','INV-%')
       ->get();
@@ -171,7 +186,7 @@ class ReportController extends Controller
       	'temps_id'
       )
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
-      ->where('periode_date', '<', $startYear.'-07-01')
+      ->where('periode_date', '<=', $endYear.'-07-01')
       ->whereNull('payments_date')
       ->where('id', 'like', 'INV-%')
       ->groupBy('temps_id')
@@ -179,6 +194,7 @@ class ReportController extends Controller
 
 	  foreach($students as $key => &$item) {
 	  	$filteredInvoices = $invoices->where('temps_id', $item->no_va);
+	  	$filteredExpected = $expected->where('temps_id', $item->no_va);
 	  	$filteredOutstanding = $outstanding->where('temps_id', $item->no_va);
         $mappedInvoices = $filteredInvoices->where('payments_date', '!=', null)
         	->whereBetween('payment_year', [$startYear, $endYear]) 
@@ -194,9 +210,9 @@ class ReportController extends Controller
           		];
         	});
 
-	    $item->amount = $filteredInvoices->isNotEmpty() ? $filteredInvoices->first()->nominal : 0;
+	    $item->amount = $filteredExpected->isNotEmpty() ? $filteredExpected->first()->nominal : 0;
         $item->invoices = $mappedInvoices;
-        $item->total_invoices = $filteredInvoices->sum('total');
+        $item->total_invoices = $filteredExpected->sum('total');
         $item->total_payments = $mappedInvoices->sum();
         $item->diff = $item->total_invoices - $item->total_payments;
         $item->total_outstanding = !$filteredOutstanding->isEmpty() ? $filteredOutstanding->sum('total') : 0;
