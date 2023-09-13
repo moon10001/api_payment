@@ -104,7 +104,7 @@ class UpdateTransactionsTableJob extends Job
       $year = date('Y', strtotime($date));
       $shortYear = date('y', strtotime($date));
       $unit = $this->unit;
-      
+
       $counter = DB::connection('finance_db')->table('journal_logs')
       ->select('journal_number')
       ->whereRaw('MONTH(date) = ?', $month)
@@ -241,6 +241,7 @@ class UpdateTransactionsTableJob extends Job
       	$mt940 = DB::table('mt940')
       	->select('id', 'nominal', 'va')
       	->where('payment_date', $this->date)
+        ->where('va_code', $this->unit->va_code)
       	->get(); 
       	echo("BEGIN ==== ".$this->date."\n");
 				$ids = $mt940->pluck('id');
@@ -248,6 +249,7 @@ class UpdateTransactionsTableJob extends Job
         $trInvoices = DB::table('tr_invoices')
         ->select(DB::raw('SUM(nominal) as total_inv, mt940_id'))
         ->whereIn('mt940_id', $ids)
+        ->where('unit_code', $this->unit->unit_code)
         ->groupBy('mt940_id')
         ->get();
 		
