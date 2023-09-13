@@ -33,7 +33,7 @@ class ImportMT940Job extends Job
 
     private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
-      ->select('id', 'nominal', 'payments_date')
+      ->select('id', 'nominal', 'payments_date', 'collectible_name')
       ->where('id', $id)
       ->first();
 
@@ -175,7 +175,18 @@ class ImportMT940Job extends Job
               'mismatch' => floatval($sum) !== floatval($data['nominal'])
             ]);
             $id = $this->insertMT940($data);
-            DB::table('tr_invoices')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
+            $updateResult = DB::table('tr_invoices')->whereNull('faspay_id')->whereNull('mt940_id')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
+
+            if($updateResult === 0) {
+            	DB::table('mt940_duplicates')
+            	->insert([
+            		'mt940_id' => $id,
+            		'va' => $data['va'],
+            		'temps_id' => $data['temps_id'],
+            		'created_at' => Carbon::now(),
+            		'updated_at' => Carbon::now()
+            	]);
+            }
         }
     }
 

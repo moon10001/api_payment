@@ -144,7 +144,7 @@ class ReportController extends Controller
       ->whereIn('student_profile.units_id', $unitIds)
       ->where('class_div.classrooms_id', $classroomsId)
    	  ->where('periods_id', $periodsId->id)
-   	  //->where('class_div.is_active', 1)
+   	  ->where('class_div.is_approve', 1)
    	  ->orderBy('student_profile.first_name', 'asc')
    	  ->orderBy('student_profile.last_name', 'asc')
       ->get();
@@ -186,7 +186,7 @@ class ReportController extends Controller
       	'temps_id'
       )
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
-      ->where('periode_date', '<=', $endYear.'-07-01')
+      ->where('periode_date', '<=', $endYear.'-06-01')
       ->whereNull('payments_date')
       ->where('id', 'like', 'INV-%')
       ->groupBy('temps_id')

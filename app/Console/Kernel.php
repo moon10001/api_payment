@@ -5,8 +5,10 @@ namespace App\Console;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
-use App\Tasks\ReconcilePaymentTask;
 use App\Jobs\ReconcilePaymentJob;
+use App\Jobs\ImportFaspayJob;
+use App\Jobs\ExportPGToJournalsJob;
+use App\Jobs\UpdateTransactionsTableJob;
 
 class Kernel extends ConsoleKernel
 {
@@ -16,7 +18,6 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
     ];
 
     /**
@@ -27,8 +28,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->exec('echo RUNNING')->everyMinute();
-//        $schedule->command('queue:work')->dailyAt('07:40');
-        $schedule->job(new ReconcilePaymentJob())->cron('* 1 * * *');
-    }
+        $schedule->job((new ReconcilePaymentJob()))->cron('* 1 * * *');
+        $schedule->job((new UpdateTransactionsTableJob()))->cron('40 1 * * *');
+        $schedule->job((new ImportFaspayJob()))->cron('30 2 * * *');
+        $schedule->job((new ExportPGToJournalsJob()))->cron('30 3 * * *');
+    }    
 }

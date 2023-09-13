@@ -49,22 +49,23 @@ class ImportFaspayJob extends Job
     }
 
     private function fileHasBeenImported($filename) {
-    	$res = DB::table('mt940_import_log')
-    	->where('filename', '"'.$filename.'"')
-    	->where('status', '"'.'PROCESSED'.'"')
+    	$res = DB::table('faspay_import_log')
+    	->where('filename', $filename)
+    	->where('status', 'PROCESSED')
     	->get();
-      echo('Imported: '.($res->count() >= 1)."\n");
+      	echo('Imported: ' .$res->count()."\n");
     	return $res->count() >= 1;
     }
 
     public function logMT940File($filename, $status = 'READING', $message = '') {
-      DB::table('mt940_import_log')->updateOrInsert([
+      DB::table('faspay_import_log')->updateOrInsert([
         'filename' => $filename,
       ], [
         'filename' => $filename,
         'processed_at' => Carbon::now(),
         'status' => $status,
-        'error_log' => $message
+        'error_log' => $message,
+        'updated_at' => Carbon::now(),
       ]);
     }
 
@@ -79,7 +80,7 @@ class ImportFaspayJob extends Job
 
     public function handle() {
       $fileCount = 0;
-      $rowCount = 0;
+      $totalRowCount = 0;
       $response = [];
       $files = [];
       echo('PROCESSING FASPAY BEGINS'."\n");
@@ -87,8 +88,10 @@ class ImportFaspayJob extends Job
       try {
         $invoicesIds = [];
         foreach(Storage::disk('faspay')->files('/') as $filename) {
+          $rowCount = 0;
           $file = Storage::disk('faspay')->get($filename);
           if ($this->fileHasBeenImported($filename)) {
+            echo($filename. ' had been imported'."\n");
             continue;
           }
           $this->logMT940File($filename);
@@ -97,7 +100,7 @@ class ImportFaspayJob extends Job
 
           $fileCount++;
           $data = [];
-          echo storage_path('app/faspay/'.$filename);
+          echo storage_path('app/faspay/'.$filename ."\n");
           $spreadsheet = IOFactory::load(storage_path('app/faspay/'.$filename));
           $worksheet = $spreadsheet->getActiveSheet();
 
@@ -122,16 +125,20 @@ class ImportFaspayJob extends Job
             ]);
           }
 
-          DB::transaction(function() use(&$data, $filename) {
+          DB::transaction(function() use(&$data, $filename, $rowCount, $totalRowCount) {
             try {
               foreach($data as $row) {
                 $this->updateTrFaspay($row);
+                $rowCount++;
               }
             } catch (Exception $e) {
               error_log('Failed processing : '. $filename);
-              $this->logMT940File($filename, 'FAILED');
+              $this->logMT940File($filename, 'FAILED', $e->getMessage());
               throw $e;
             } finally {
+              echo('Finished processing: '. $filename."\n");
+              echo('Rows processed: '. $rowCount."\n");
+              $totalRowCount += $rowCount;
               $this->logMT940File($filename, 'PROCESSED');
             }
           });
@@ -141,6 +148,6 @@ class ImportFaspayJob extends Job
       }
       echo('==============================================='."\n");
       echo('Files processed: '. $fileCount."\n");
-      echo('Rows processed : '. $rowCount."\n");
+      echo('Rows processed : '. $totalRowCount."\n");
     }
 }

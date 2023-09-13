@@ -32,7 +32,7 @@ class ReconcilePaymentJob extends Job
 	      
        	$transactions = DB::connection('mysql')->table('mt940')
        	->select(
-       		'tr_invoices.payments_date as payment_date',
+       		'mt940.payment_date',
        		'prm_payments.id as prm_payments_id',
        		DB::raw(
        			'SUBSTR(mt940.temps_id, 1, 3) as units_id'
