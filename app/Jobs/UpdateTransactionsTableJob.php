@@ -12,6 +12,7 @@ class UpdateTransactionsTableJob extends Job
     private $from;
     private $to;
     private $unitId;
+    private $unit;
     private $bankCoa = '11310';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
@@ -51,7 +52,10 @@ class UpdateTransactionsTableJob extends Job
         } else {
           $this->date = date('Y-m-d');
         }
-        var_dump($date);
+    }
+
+    private function setUnit($unitId) {
+      $this->unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
     }
 
     /**
@@ -66,7 +70,7 @@ class UpdateTransactionsTableJob extends Job
         foreach($data as $unitId => $payment) {
           $transactions = collect($payment);
           $date = $this->date;
-          var_dump($unitId);
+          $this->setUnit($unitId);
           $this->createReconciliation($unitId, $date, $transactions);
         }
       } catch (Exception $e) {
@@ -99,8 +103,8 @@ class UpdateTransactionsTableJob extends Job
       $month = date('m', strtotime($date));
       $year = date('Y', strtotime($date));
       $shortYear = date('y', strtotime($date));
-      $unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
-
+      $unit = $this->unit;
+      
       $counter = DB::connection('finance_db')->table('journal_logs')
       ->select('journal_number')
       ->whereRaw('MONTH(date) = ?', $month)
@@ -166,7 +170,7 @@ class UpdateTransactionsTableJob extends Job
       $sum = $items->sum('nominal');
       $timestamp = Carbon::now();
       $journalNumber = $this->generateJournalNumber($date, $unitId);
-	  $prmPaymentList = DB::table('prm_payments')->get();
+	    $prmPaymentList = DB::table('prm_payments')->get();
 	  
       foreach($items as $item) {
         $prmPayment = $prmPaymentList->first(function ($value, $key) use ($item) { 
@@ -208,7 +212,7 @@ class UpdateTransactionsTableJob extends Job
         'journal_number' => $journalNumber,
         'date' => $date,
         'code_of_account' => '11310',
-        'description' => 'Rekonsiliasi H2H '.$unit->name,
+        'description' => 'Rekonsiliasi H2H '.$this->unit->name,
         'credit' => $sum,
         'debit' => null,
         'units_id' => 95,
@@ -221,7 +225,7 @@ class UpdateTransactionsTableJob extends Job
         'journal_number' => $journalNumber,
         'date' => $date,
         'code_of_account' => '12902',
-        'description' => 'Rekonsiliasi H2H '.$unit->name,
+        'description' => 'Rekonsiliasi H2H '.$this->unit->name,
         'credit' => null,
         'debit' => $sum,
         'units_id' => 95,
@@ -230,5 +234,64 @@ class UpdateTransactionsTableJob extends Job
         'updated_at' => $timestamp
       ]);
 
+    }
+
+    public function handleMT940ForcedOK() {
+      try {
+      	$mt940 = DB::table('mt940')
+      	->select('id', 'nominal', 'va')
+      	->where('payment_date', $this->date)
+      	->get(); 
+      	echo("BEGIN ==== ".$this->date."\n");
+				$ids = $mt940->pluck('id');
+		
+        $trInvoices = DB::table('tr_invoices')
+        ->select(DB::raw('SUM(nominal) as total_inv, mt940_id'))
+        ->whereIn('mt940_id', $ids)
+        ->groupBy('mt940_id')
+        ->get();
+		
+		    $total = 0;
+		      	
+      	foreach($mt940 as $row) {
+      		$nominal = $row->nominal;
+      		$filtered = $trInvoices->where('mt940_id', $row->id)->first();     		
+      		if (!is_null($filtered)) {
+      			$diff = floatval($nominal) - floatval($filtered->total_inv);
+      			if ($diff > 0) {
+      				$total += $diff;
+				  	  echo($row->id."\n");
+              echo($row->nominal."\n");
+              echo($filtered->total_inv."\n");
+              echo($total."\n\n");
+            }      			
+      		} else {
+            $diff = floatval($nominal);
+            $total += $diff;
+            echo ($row->id."\n");
+            echo ($row->nominal."\n");
+            echo ($total."\n\n");
+          }
+      	}
+        if ($total > 0) {
+          $journalNumber =  $this->generateJournalNumber($this->date, $this->unit->id);
+
+          $this->logJournal([
+            'journal_id' => 0,
+            'journal_number' => $journalNumber,
+            'date' => $this->date,
+            'code_of_account' => '21701',
+            'description' => 'Lebih bayar H2H '.$this->unit->name,
+            'credit' => $total,
+            'debit' => null,
+            'units_id' => 95,
+            'countable' => 1,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+          ]);
+        } 
+      } catch (Exception $e) {
+      	throw $e;
+      }
     }
 }
