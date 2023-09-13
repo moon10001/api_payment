@@ -72,6 +72,7 @@ class UpdateTransactionsTableJob extends Job
           $date = $this->date;
           $this->setUnit($unitId);
           $this->createReconciliation($unitId, $date, $transactions);
+          $this->handleMT940ForcedOK();
         }
       } catch (Exception $e) {
         throw $e;
