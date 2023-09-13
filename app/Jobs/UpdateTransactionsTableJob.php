@@ -72,8 +72,8 @@ class UpdateTransactionsTableJob extends Job
           $date = $this->date;
           $this->setUnit($unitId);
           $this->createReconciliation($unitId, $date, $transactions);
-          $this->handleMT940ForcedOK();
         }
+        $this->handleMT940ForcedOK();
       } catch (Exception $e) {
         throw $e;
       }
@@ -242,7 +242,6 @@ class UpdateTransactionsTableJob extends Job
       	$mt940 = DB::table('mt940')
       	->select('id', 'nominal', 'va')
       	->where('payment_date', $this->date)
-        ->where('va_code', $this->unit->va_code)
       	->get(); 
       	echo("BEGIN ==== ".$this->date."\n");
 				$ids = $mt940->pluck('id');
@@ -250,7 +249,6 @@ class UpdateTransactionsTableJob extends Job
         $trInvoices = DB::table('tr_invoices')
         ->select(DB::raw('SUM(nominal) as total_inv, mt940_id'))
         ->whereIn('mt940_id', $ids)
-        ->where('unit_code', $this->unit->unit_code)
         ->groupBy('mt940_id')
         ->get();
 		
@@ -284,7 +282,7 @@ class UpdateTransactionsTableJob extends Job
             'journal_number' => $journalNumber,
             'date' => $this->date,
             'code_of_account' => '21701',
-            'description' => 'Lebih bayar H2H '.$this->unit->name,
+            'description' => 'Lebih bayar H2H ',
             'credit' => $total,
             'debit' => null,
             'units_id' => 95,
