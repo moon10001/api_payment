@@ -153,7 +153,26 @@ class ImportMT940Job extends Job
               $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
               $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
 
-              $datediff = round(($toTimestamp - $fromTimestamp)/(60 * 60 * 24 * 30));
+              $iyear = intval($fromYear);
+              $imonth = intval($fromMonth);
+              
+              while(str_pad($iyear, 2, 0, STR_PAD_LEFT).str_pad($imonth-1, 2, 0, STR_PAD_LEFT) != $toYear.$toMonth) {
+                $imonth ++;
+                if ($imonth > 12) {
+                  $imonth = 1;
+                  $iyear ++;
+                }
+                $id = 'INV-' . $data['temps_id'] . str_pad($iyear, 2, 0, STR_PAD_LEFT) . str_pad($imonth, 2, 0, STR_PAD_LEFT);
+                
+                $trInvoice = $this->getTrInvoice($id);
+                if ($trInvoice) {
+                  array_push($trInvoiceIds, $trInvoice->id);
+                  $sum = $trInvoice->nominal + $sum;
+                  $this->updateTrInvoice($id, $data['payments_date']);
+                  $this->insertTrInvoiceDetails($id, $data);
+                }
+              }
+              /*$datediff = round(($toTimestamp - $fromTimestamp)/(60 * 60 * 24 * 30));
               $currentTimestamp = $fromTimestamp;
               for ($i = 1; $i <= $datediff; $i++) {
                 $currentTimestamp = strtotime('next month', $currentTimestamp);
@@ -167,7 +186,7 @@ class ImportMT940Job extends Job
                   $this->updateTrInvoice($id, $data['payments_date']);
                   $this->insertTrInvoiceDetails($id, $data);
                 }
-              }
+              }*/
             }
 
             $data = array_merge($data, [
@@ -175,7 +194,7 @@ class ImportMT940Job extends Job
               'mismatch' => floatval($sum) !== floatval($data['nominal'])
             ]);
             $id = $this->insertMT940($data);
-            $updateResult = DB::table('tr_invoices')->whereNull('faspay_id')->whereNull('mt940_id')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
+            $updateResult = DB::table('tr_invoices')->whereNull('mt940_id')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
 
             if($updateResult === 0) {
             	DB::table('mt940_duplicates')

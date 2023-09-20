@@ -57,22 +57,83 @@ class ExportPGToJournalsJob extends Job
     public function handle()
     {
       try {
-        $data = $this->getReconciliatedData();
+        /*$data = $this->getReconciliatedData();
         foreach($data as $unitId => $payment) {
           $transactions = collect($payment);
           $date = $this->date;
           $this->createReconciliation($unitId, $date, $transactions);
-        }
+        }*/
+        $this->handleReconciliation();
       } catch (Exception $e) {
         throw $e;
       }
     }
-
+    
+    public function handleReconciliation() {
+      $transactions = collect(DB::select(DB::raw('
+		SELECT 
+			prm_school_units.id as units_id, 
+			prm_school_units.name as unit_name, 
+			sum(a.nominal) as nominal
+		FROM 
+			ypl_h2h.tr_invoices a 
+		INNER JOIN ypl_h2h.tr_faspay b ON b.id = a.faspay_id 
+		INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = SUBSTR(a.temps_id, 1, 3) 
+		INNER JOIN api_kliksekolah.prm_school_units ON prm_va.unit_id = prm_school_units.id
+		WHERE 
+			DATE(b.settlement_date) = "' . $this->date . '"
+		GROUP BY prm_school_units.id
+      ')));
+      
+      foreach($transactions as $item) {
+      	$journalNumber = $this->generateJournalNumber($this->date, 95);
+        $this->logJournal([
+        	'journal_id' => 0,
+            'journal_number' => $journalNumber,
+            'date' => $this->date,
+            'code_of_account' => '11301',
+            'description' => 'Rekonsiliasi PG '.$item->unit_name,
+            'credit' => $item->nominal,
+            'debit' => null,
+            'units_id' => 95,
+            'countable' => 1,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
+        
+        echo('Inserting '.$journalNumber);
+        echo "\n";
+        
+        $journalNumber = $this->generateJournalNumber($this->date, $item->units_id);                                                                                 
+        $this->logJournal([
+           'journal_id' => 0,
+           'journal_number' => $journalNumber,
+           'date' => $this->date,
+           'code_of_account' => '12902',
+           'description' => 'Rekonsiliasi PG',
+           'credit' => null,
+           'debit' => $item->nominal,
+           'units_id' => $item->units_id,
+           'countable' => 1,
+           'created_at' => Carbon::now(),
+           'updated_at' => Carbon::now(),
+        ]);                             
+        
+        echo ('Inserting '. $journalNumber);
+        echo "\n\n";                             	
+      }
+    }
 
     public function getReconciliatedData() {
       $data = [];
 
       DB::enableQueryLog();
+      $trFaspay = DB::table('tr_faspay')
+      ->select('id', 'settlement_total')
+      ->where('status' , 2)
+      ->where('settlement_date', $this->date)
+      ->get();
+      
 	  $transactions = collect(DB::select(DB::raw('
 	  	SELECT
 	  		DATE(tr_faspay.settlement_date) as payment_date,
@@ -92,6 +153,7 @@ class ExportPGToJournalsJob extends Job
 	  	INNER JOIN
 	  		api_kliksekolah.prm_va on prm_va.va_code = tr_invoices.va_code
 	  	WHERE DATE(tr_faspay.settlement_date) = "' . $this->date . '"
+	  	AND tr_faspay.status = 2
 	  	GROUP BY tr_invoices.va_code, tr_payment_details.payments_id
 	  	ORDER BY tr_invoices.va_code ASC
 	  ')));

@@ -19,18 +19,16 @@ class SeedH2H extends Seeder
      */
     public function run()
     {
-        $begin = new DateTime('2023-01-01');
-        $end = new DateTime('2023-02-01');
+        $begin = new DateTime('2023-04-05');
+        $end = new DateTime('2023-04-06');
 
         $interval = DateInterval::createFromDateString('1 day');
         $period = new DatePeriod($begin, $interval, $end);
         foreach ($period as $dt) {
-//	      $job = new ReconcilePaymentJob($dt->format('Y-m-d'));
-//	      $job->handle();
-//		  $job = new Mt940ForcedOKJob($dt->format('Y-m-d'));
-//		  $job->handle();
-          $job = new UpdateTransactionsTableJob('','','',$dt->format('Y-m-d'));
-          $job->handle();
+	      $job = new ReconcilePaymentJob($dt->format('Y-m-d'));
+	      $job->handle();
+//          $job = new UpdateTransactionsTableJob('','','',$dt->format('Y-m-d'));
+//          $job->handle();
         }
     }
 }

@@ -104,7 +104,7 @@ class UpdateTransactionsTableJob extends Job
       $month = date('m', strtotime($date));
       $year = date('Y', strtotime($date));
       $shortYear = date('y', strtotime($date));
-      $unit = $this->unit;
+      $unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
 
       $counter = DB::connection('finance_db')->table('journal_logs')
       ->select('journal_number')
@@ -275,7 +275,7 @@ class UpdateTransactionsTableJob extends Job
           }
       	}
         if ($total > 0) {
-          $journalNumber =  $this->generateJournalNumber($this->date, $this->unit->id);
+          $journalNumber =  $this->generateJournalNumber($this->date, 95);
 
           $this->logJournal([
             'journal_id' => 0,
@@ -283,12 +283,26 @@ class UpdateTransactionsTableJob extends Job
             'date' => $this->date,
             'code_of_account' => '21701',
             'description' => 'Lebih bayar H2H ',
-            'credit' => $total,
-            'debit' => null,
+            'debit' => $total,
+            'credit' => null,
             'units_id' => 95,
             'countable' => 1,
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
+          ]);
+          
+          $this->logJournal([
+          	'journal_id' => 0,
+          	'journal_number' => $journalNumber,
+          	'date' => $this->date,
+          	'code_of_account' => '11310',
+          	'description' => 'Lebih bayar H2H',
+          	'debit' => null,
+          	'credit' => $total,
+          	'units_id' => 95,
+          	'countable' => 1,
+          	'created_at' => Carbon::now(),
+          	'updated_at' => Carbon::now(),
           ]);
         } 
       } catch (Exception $e) {

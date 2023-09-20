@@ -50,11 +50,30 @@ class ReconcilePaymentJob extends Job
        	->where('mt940.payment_date', $this->date)
        	->groupBy('units_id', 'mt940.payment_date', 'prm_payments.id', 'prm_payments.coa')
        	->orderBy('mt940.payment_date', 'ASC')->get();
-       	
-       	$fixedTransactions = $transactions->map(function ($item, $key) use ($unitsVA) {
+
+
+		$discounts = DB::table('tr_payment_discounts')
+		->select(DB::raw('SUM(tr_payment_discounts.nominal) as discount, payments_id'))
+		->join('tr_invoices', 'tr_invoices.id', 'tr_payment_discounts.invoices_id')
+		->join('mt940', 'mt940.id', 'tr_invoices.mt940_id')
+		->where('mt940.payment_date', $this->date)
+		->groupBy('payments_id')
+		->get();
+				       	
+		var_dump($discounts);
+       	$fixedTransactions = $transactions->map(function ($item, $key) use ($unitsVA, $discounts) {
+       		$discount = $discounts->first(function($value, $key) use($item) {
+       			return $value->payments_id == $item->prm_payments_id;
+       		});
+       		
        		$va = $unitsVA->first(function ($value, $key) use ($item)  {
        			return $value->va_code == $item->units_id;
        		});
+
+       		if ($discount != null) {
+       			echo ('DISCOUNT '. $item->nominal . ' - ' . $discount->discount);
+	       		$item->nominal = $item->nominal - $discount->discount;
+       		}
        		$item->units_id = $va->unit_id;
        		return $item;
        	});
