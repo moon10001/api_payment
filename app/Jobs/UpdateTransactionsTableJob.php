@@ -66,13 +66,16 @@ class UpdateTransactionsTableJob extends Job
     public function handle()
     {
       try {
-        $data = $this->getReconciliatedData();
-        foreach($data as $unitId => $payment) {
-          $transactions = collect($payment);
-          $date = $this->date;
-          $this->setUnit($unitId);
-          $this->createReconciliation($unitId, $date, $transactions);
-        }
+        // $data = $this->getReconciliatedData();
+        // foreach($data as $unitId => $payment) {
+        //   $transactions = collect($payment);
+        //   $date = $this->date;
+        //   $this->setUnit($unitId);
+        //   $this->createReconciliation($unitId, $date, $transactions);
+        // }
+        $this->logToJournal();
+        $this->logDetailsToJournal();
+        $this->logDiscountsToJournal();
         $this->handleMT940ForcedOK();
       } catch (Exception $e) {
         throw $e;
@@ -234,9 +237,135 @@ class UpdateTransactionsTableJob extends Job
         'created_at' => $timestamp,
         'updated_at' => $timestamp
       ]);
-
     }
 
+    public function logToJournal() {
+      $mt940 = collect(DB::select(DB::raw('
+        SELECT *, SUM(nominal) as total
+        FROM
+          mt940,
+          ( 
+            SELECT distinct unit_id, va_code, name, unit_code from api_kliksekolah.prm_va
+            INNER JOIN api_kliksekolah.prm_school_units on prm_school_units.id = prm_va.unit_id
+          ) b
+        WHERE payment_date = "'. $this->date . '"
+        GROUP BY unit_id
+      ')));
+
+      foreach($mt940 as $data) {
+        $timestamp = Carbon::now();
+
+        $journalNumber = $this->generateJournalNumber($this->date, 95);
+        $this->logJournal([
+          'journal_id' => 0,
+        'journal_number' => $journalNumber,
+        'date' => $this->date,
+        'code_of_account' => '11310',
+        'description' => 'Rekonsiliasi H2H '.$data->name,
+        'credit' => $data['total'],
+        'debit' => null,
+        'units_id' => 95,
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
+        ]);
+
+        $journalNumber = $this->generateJournalNumber($this->date, $data['unit_id']);
+        $this->logJournal([
+        'journal_id' => 0,
+        'journal_number' => $journalNumber,
+        'date' => $this->date,
+        'code_of_account' => '12902',
+        'description' => 'Rekonsiliasi H2H '.$data->name,
+        'credit' => null,
+        'debit' => $data['total'],
+        'units_id' => $data['unit_id'],
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
+      ]);
+      }
+    }
+
+    public function logDetailsToJournal() {
+      $result = DB::select(DB::raw('
+        SELECT 
+          prm_va.unit_id,
+          prm_payments.id,
+          prm_payments.name,
+          prm_payments.coa,
+          SUM(tr_payment_details.nominal) as total
+        FROM
+          tr_invoices
+        INNER JOIN
+          tr_payment_details ON tr_payment_details.invoices_id = tr_invoices.id
+        INNER JOIN
+          mt940 on mt940.id = tr_invoices.mt940_id
+        INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = mt940.va_code
+        INNER JOIN api_kliksekolah.prm_payments ON prm_payments.id = tr_payment_details.payments_id
+        WHERE mt940.payment_date = "' . $this->date . '"
+        GROUP BY prm_va.unit_id, payments_id
+      '));
+
+      foreach($result as $data) {
+        $timestamp = Carbon::now();
+        $journalNumber = $this->generateJournalNumber($this->date, $data['unit_id']);
+        $this->logJournal([
+          'journal_id' => 0,
+          'journal_number' => $journalNumber,
+          'date' => $this->date,
+          'code_of_account' => $data['coa'],
+          'description' => $data['name'],
+          'credit' => null,
+          'debit' => $data['total'],
+          'units_id' => $data['unit_id'],
+          'countable' => 1,
+          'created_at' => $timestamp,
+          'updated_at' => $timestamp
+        ]);
+      }
+    }
+    
+    public function logDiscountsToJournal() {
+      $result = DB::select(DB::raw('
+        SELECT 
+          prm_va.unit_id,
+          prm_payments.id,
+          prm_payments.name,
+          prm_payments.coa,
+          SUM(tr_payment_discounts.nominal) as total
+        FROM
+          tr_invoices
+        INNER JOIN
+          tr_payment_discounts ON tr_payment_discounts.invoices_id = tr_invoices.id
+        INNER JOIN
+          mt940 on mt940.id = tr_invoices.mt940_id
+        INNER JOIN 
+          api_kliksekolah.prm_va ON prm_va.va_code = mt940.va_code
+        INNER JOIN 
+          api_kliksekolah.prm_payments ON prm_payments.id = tr_payment_discounts.payments_id
+        WHERE mt940.payment_date = "' . $this->date . '"
+        GROUP BY prm_va.unit_id, payments_id
+      '));
+
+      foreach($result as $data) {
+        $timestamp = Carbon::now();
+        $journalNumber = $this->generateJournalNumber($this->date, $data['unit_id']);
+        $this->logJournal([
+          'journal_id' => 0,
+          'journal_number' => $journalNumber,
+          'date' => $this->date,
+          'code_of_account' => $data['coa'],
+          'description' => $data['name'],
+          'credit' => null,
+          'debit' => $data['total'],
+          'units_id' => $data['unit_id'],
+          'countable' => 1,
+          'created_at' => $timestamp,
+          'updated_at' => $timestamp
+        ]);
+      }
+    }
     public function handleMT940ForcedOK() {
       try {
       	$mt940 = DB::table('mt940')
