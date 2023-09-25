@@ -14,6 +14,8 @@ class ExportPGToJournalsJob extends Job
     private $bankCoa = '11301';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
+
+    private $detailJournalNumber = [];
     private $paymentCoa = [
       'Uang Sekolah' => 41301,
       'Uang Kegiatan' => 41501,
@@ -105,19 +107,34 @@ class ExportPGToJournalsJob extends Job
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ]);
+
+        $this->logJournal([
+        	'journal_id' => 0,
+            'journal_number' => $journalNumber,
+            'date' => $this->date,
+            'code_of_account' => '12902',
+            'description' => 'Rekonsiliasi PG '.$item->unit_name,
+            'credit' => null,
+            'debit' => $item->nominal,
+            'units_id' => 95,
+            'countable' => 1,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
         
         echo('Inserting '.$journalNumber);
         echo "\n";
         
-        $journalNumber = $this->generateJournalNumber($this->date, $item->units_id);                                                                                 
+        $journalNumber = $this->generateJournalNumber($this->date, $item->units_id);   
+        $this->detailJournalNumber[$item->units_id] = $journalNumber;                                                                              
         $this->logJournal([
            'journal_id' => 0,
            'journal_number' => $journalNumber,
            'date' => $this->date,
            'code_of_account' => '12902',
            'description' => 'Rekonsiliasi PG',
-           'credit' => null,
-           'debit' => $item->nominal,
+           'credit' => $item->nominal,
+           'debit' => null,
            'units_id' => $item->units_id,
            'countable' => 1,
            'created_at' => Carbon::now(),
@@ -151,7 +168,7 @@ class ExportPGToJournalsJob extends Job
 
       foreach($result as $data) {
         $timestamp = Carbon::now();
-        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        $journalNumber = $this->detailJournalNumber[$data->unit_id] ;
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
@@ -266,7 +283,7 @@ class ExportPGToJournalsJob extends Job
           	'journal_id' => 0,
           	'journal_number' => $journalNumber,
           	'date' => $this->date,
-          	'code_of_account' => '11310',
+          	'code_of_account' => '11301',
           	'description' => 'Lebih bayar PG',
           	'debit' => null,
           	'credit' => $total,

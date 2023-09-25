@@ -17,6 +17,7 @@ class UpdateTransactionsTableJob extends Job
     private $bankCoa = '11310';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
+    private $detailJournalNumber = [];
     private $paymentCoa = [
       'Uang Sekolah' => 41301,
       'Uang Kegiatan' => 41501,
@@ -148,19 +149,35 @@ class UpdateTransactionsTableJob extends Job
         'updated_at' => $timestamp
         ]);
 
-        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
         $this->logJournal([
-        'journal_id' => 0,
+          'journal_id' => 0,
         'journal_number' => $journalNumber,
         'date' => $this->date,
         'code_of_account' => '12902',
         'description' => 'Rekonsiliasi H2H '.$data->name,
         'credit' => null,
         'debit' => $data->total,
+        'units_id' => 95,
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
+        ]);
+
+        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        $this->detailJournalNumber[$data->unit_id] = $journalNumber;
+        $this->logJournal([
+        'journal_id' => 0,
+        'journal_number' => $journalNumber,
+        'date' => $this->date,
+        'code_of_account' => '12902',
+        'description' => 'Rekonsiliasi H2H '.$data->name,
+        'credit' => $data->total,
+        'debit' => null,
         'units_id' => $data->unit_id,
         'countable' => 1,
         'created_at' => $timestamp,
         'updated_at' => $timestamp
+        
       ]);
       }
     }
@@ -187,7 +204,7 @@ class UpdateTransactionsTableJob extends Job
 
       foreach($result as $data) {
         $timestamp = Carbon::now();
-        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        $journalNumber = $this->detailJournalNumber[$data->unit_id];
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
