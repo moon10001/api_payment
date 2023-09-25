@@ -212,7 +212,7 @@ class ExportPGToJournalsJob extends Job
       try {
       	$faspay = DB::table('tr_faspay')
       	->select('id', 'settlement_total')
-      	->whereRaw('DATE(payment_date) = "?"', $this->date)
+      	->whereRaw('DATE(settlement_date) = "?"', $this->date)
       	->get(); 
       	echo("BEGIN ==== ".$this->date."\n");
 				$ids = $faspay->pluck('id');
@@ -226,14 +226,14 @@ class ExportPGToJournalsJob extends Job
 		    $total = 0;
 		      	
       	foreach($faspay as $row) {
-      		$nominal = $row->nominal;
+      		$nominal = $row->settlement_total;
       		$filtered = $trInvoices->where('faspay_id', $row->id)->first();     		
       		if (!is_null($filtered)) {
       			$diff = floatval($nominal) - floatval($filtered->total_inv);
       			if ($diff > 0) {
       				$total += $diff;
 				  	  echo($row->id."\n");
-              echo($row->nominal."\n");
+              echo($row->settlement_total."\n");
               echo($filtered->total_inv."\n");
               echo($total."\n\n");
             }      			
