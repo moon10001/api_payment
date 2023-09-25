@@ -74,14 +74,21 @@ class ExportPGToJournalsJob extends Job
 		SELECT 
 			prm_school_units.id as units_id, 
 			prm_school_units.name as unit_name, 
-			sum(a.nominal) as nominal
+			sum(a.settlement_total) as nominal
 		FROM 
-			ypl_h2h.tr_invoices a 
-		INNER JOIN ypl_h2h.tr_faspay b ON b.id = a.faspay_id 
-		INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = SUBSTR(a.temps_id, 1, 3) 
-		INNER JOIN api_kliksekolah.prm_school_units ON prm_va.unit_id = prm_school_units.id
+			ypl_h2h.tr_faspay a 
+		INNER JOIN (
+			select * ypl_h2h.tr_invoices
+			WHERE faspay_id is not null
+			group by faspay_id
+		) b ON a.id = b.faspay_id 
+		INNER JOIN (
+			SELECT * from api_kliksekolah.prm_va 
+			GROUP BY va_code
+		) c ON c.va_code = SUBSTR(b.temps_id, 1, 3) 
+		INNER JOIN api_kliksekolah.prm_school_units ON c.unit_id = prm_school_units.id
 		WHERE 
-			DATE(b.settlement_date) = "' . $this->date . '"
+			DATE(a.settlement_date) = "' . $this->date . '"
 		GROUP BY prm_school_units.id
       ')));
       

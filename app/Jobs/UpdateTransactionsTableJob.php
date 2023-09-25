@@ -245,10 +245,12 @@ class UpdateTransactionsTableJob extends Job
         FROM
           mt940,
           ( 
-            SELECT distinct unit_id, va_code, name, unit_code from api_kliksekolah.prm_va
+            SELECT distinct unit_id, prm_va.va_code, name, prm_school_units.unit_code from api_kliksekolah.prm_va
             INNER JOIN api_kliksekolah.prm_school_units on prm_school_units.id = prm_va.unit_id
           ) b
-        WHERE payment_date = "'. $this->date . '"
+        WHERE 
+        mt940.payment_date = "'. $this->date . '"
+        AND b.va_code = mt940.va_code
         GROUP BY unit_id
       ')));
 
@@ -262,7 +264,7 @@ class UpdateTransactionsTableJob extends Job
         'date' => $this->date,
         'code_of_account' => '11310',
         'description' => 'Rekonsiliasi H2H '.$data->name,
-        'credit' => $data['total'],
+        'credit' => $data->total,
         'debit' => null,
         'units_id' => 95,
         'countable' => 1,
@@ -270,7 +272,7 @@ class UpdateTransactionsTableJob extends Job
         'updated_at' => $timestamp
         ]);
 
-        $journalNumber = $this->generateJournalNumber($this->date, $data['unit_id']);
+        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
         $this->logJournal([
         'journal_id' => 0,
         'journal_number' => $journalNumber,
@@ -278,8 +280,8 @@ class UpdateTransactionsTableJob extends Job
         'code_of_account' => '12902',
         'description' => 'Rekonsiliasi H2H '.$data->name,
         'credit' => null,
-        'debit' => $data['total'],
-        'units_id' => $data['unit_id'],
+        'debit' => $data->total,
+        'units_id' => $data->unit_id,
         'countable' => 1,
         'created_at' => $timestamp,
         'updated_at' => $timestamp
@@ -302,23 +304,23 @@ class UpdateTransactionsTableJob extends Job
         INNER JOIN
           mt940 on mt940.id = tr_invoices.mt940_id
         INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = mt940.va_code
-        INNER JOIN api_kliksekolah.prm_payments ON prm_payments.id = tr_payment_details.payments_id
+        INNER JOIN prm_payments ON prm_payments.id = tr_payment_details.payments_id
         WHERE mt940.payment_date = "' . $this->date . '"
         GROUP BY prm_va.unit_id, payments_id
       '));
 
       foreach($result as $data) {
         $timestamp = Carbon::now();
-        $journalNumber = $this->generateJournalNumber($this->date, $data['unit_id']);
+        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $this->date,
-          'code_of_account' => $data['coa'],
-          'description' => $data['name'],
+          'code_of_account' => $data->coa,
+          'description' => $data->name,
           'credit' => null,
-          'debit' => $data['total'],
-          'units_id' => $data['unit_id'],
+          'debit' => $data->total,
+          'units_id' => $data->unit_id,
           'countable' => 1,
           'created_at' => $timestamp,
           'updated_at' => $timestamp
@@ -343,23 +345,23 @@ class UpdateTransactionsTableJob extends Job
         INNER JOIN 
           api_kliksekolah.prm_va ON prm_va.va_code = mt940.va_code
         INNER JOIN 
-          api_kliksekolah.prm_payments ON prm_payments.id = tr_payment_discounts.payments_id
+          prm_payments ON prm_payments.id = tr_payment_discounts.payments_id
         WHERE mt940.payment_date = "' . $this->date . '"
         GROUP BY prm_va.unit_id, payments_id
       '));
 
       foreach($result as $data) {
         $timestamp = Carbon::now();
-        $journalNumber = $this->generateJournalNumber($this->date, $data['unit_id']);
+        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,
           'date' => $this->date,
-          'code_of_account' => $data['coa'],
-          'description' => $data['name'],
+          'code_of_account' => $data->coa,
+          'description' => $data->name,
           'credit' => null,
-          'debit' => $data['total'],
-          'units_id' => $data['unit_id'],
+          'debit' => $data->total,
+          'units_id' => $data->unit_id,
           'countable' => 1,
           'created_at' => $timestamp,
           'updated_at' => $timestamp
