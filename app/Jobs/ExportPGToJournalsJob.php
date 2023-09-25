@@ -76,7 +76,7 @@ class ExportPGToJournalsJob extends Job
         FROM 
           ypl_h2h.tr_faspay a 
         INNER JOIN (
-          select * ypl_h2h.tr_invoices
+          select * from ypl_h2h.tr_invoices
           WHERE faspay_id is not null
           group by faspay_id
         ) b ON a.id = b.faspay_id 
