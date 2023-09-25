@@ -180,7 +180,7 @@ class ExportPGToJournalsJob extends Job
         INNER JOIN
           tr_payment_discounts ON tr_payment_discounts.invoices_id = tr_invoices.id
         INNER JOIN
-          mt940 on tr_faspay.id = tr_invoices.faspay_id
+          tr_faspay on tr_faspay.id = tr_invoices.faspay_id
         INNER JOIN 
           api_kliksekolah.prm_va ON prm_va.va_code = tr_invoices.va_code
         INNER JOIN 
@@ -227,7 +227,7 @@ class ExportPGToJournalsJob extends Job
 		      	
       	foreach($faspay as $row) {
       		$nominal = $row->nominal;
-      		$filtered = $trInvoices->where('mt940_id', $row->id)->first();     		
+      		$filtered = $trInvoices->where('faspay_id', $row->id)->first();     		
       		if (!is_null($filtered)) {
       			$diff = floatval($nominal) - floatval($filtered->total_inv);
       			if ($diff > 0) {
