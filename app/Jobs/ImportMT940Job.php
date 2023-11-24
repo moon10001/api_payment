@@ -156,7 +156,7 @@ class ImportMT940Job extends Job
               $iyear = intval($fromYear);
               $imonth = intval($fromMonth);
               
-              while(str_pad($iyear, 2, 0, STR_PAD_LEFT).str_pad($imonth-1, 2, 0, STR_PAD_LEFT) != $toYear.$toMonth) {
+              while(str_pad($iyear, 2, 0, STR_PAD_LEFT).str_pad($imonth, 2, 0, STR_PAD_LEFT) != $toYear.$toMonth) {
                 $imonth ++;
                 if ($imonth > 12) {
                   $imonth = 1;

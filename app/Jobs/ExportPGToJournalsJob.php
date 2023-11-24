@@ -160,7 +160,7 @@ class ExportPGToJournalsJob extends Job
           tr_payment_details ON tr_payment_details.invoices_id = tr_invoices.id
         INNER JOIN
           tr_faspay on tr_faspay.id = tr_invoices.faspay_id
-        INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = tr_invoices.va_code
+        INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = SUBSTR(tr_invoices.temps_id, 1, 3)
         INNER JOIN prm_payments ON prm_payments.id = tr_payment_details.payments_id
         WHERE date(tr_faspay.settlement_date) = "' . $this->date . '"
         GROUP BY prm_va.unit_id, payments_id
@@ -199,7 +199,7 @@ class ExportPGToJournalsJob extends Job
         INNER JOIN
           tr_faspay on tr_faspay.id = tr_invoices.faspay_id
         INNER JOIN 
-          api_kliksekolah.prm_va ON prm_va.va_code = tr_invoices.va_code
+          api_kliksekolah.prm_va ON prm_va.va_code = SUBSTR(tr_invoices.temps_id, 1, 3)
         INNER JOIN 
           prm_payments ON prm_payments.id = tr_payment_discounts.payments_id
         WHERE date(tr_faspay.settlement_date) = "' . $this->date . '"
@@ -208,7 +208,8 @@ class ExportPGToJournalsJob extends Job
 
       foreach($result as $data) {
         $timestamp = Carbon::now();
-        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        //$journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        $journalNumber = $this->detailJournalNumber($data->unit_id);
         $this->logJournal([
           'journal_id' => 0,
           'journal_number' => $journalNumber,

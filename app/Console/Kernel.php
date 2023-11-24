@@ -28,9 +28,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->job((new ReconcilePaymentJob()))->cron('* 1 * * *');
-        $schedule->job((new UpdateTransactionsTableJob()))->cron('40 1 * * *');
-        $schedule->job((new ImportFaspayJob()))->cron('30 2 * * *');
-        $schedule->job((new ExportPGToJournalsJob()))->cron('30 3 * * *');
+        $schedule->job((new ReconcilePaymentJob()))->cron('* 4 * * *');
+        $schedule->job((new UpdateTransactionsTableJob()))->cron('40 4 * * *');
+        $schedule->job((new ImportFaspayJob()))->cron('30 3 * * *');
+        $schedule->job((new ExportPGToJournalsJob()))->cron('30 5 * * *');
     }    
 }

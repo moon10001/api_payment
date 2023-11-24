@@ -118,9 +118,10 @@ class UpdateTransactionsTableJob extends Job
 
     public function logToJournal() {
       $mt940 = collect(DB::select(DB::raw('
-        SELECT *, SUM(nominal) as total
+        SELECT *, SUM(tr_invoices.nominal) as total
         FROM
-          mt940,
+          tr_invoices
+          INNER JOIN mt940 on tr_invoices.mt940_id = mt940.id,
           ( 
             SELECT distinct unit_id, prm_va.va_code, name, prm_school_units.unit_code from api_kliksekolah.prm_va
             INNER JOIN api_kliksekolah.prm_school_units on prm_school_units.id = prm_va.unit_id

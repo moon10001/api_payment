@@ -30,6 +30,7 @@ class SupervisionsController extends Controller
       $endYear = $year + 1;
 
       $va = $request->va_code[0]['va_code'];
+      $unitId = $request->va_code[0]['unit_id'];
       $coa = $request->coa;
       if (isset($request->year)) {
         $year = $request->year;
@@ -69,7 +70,6 @@ class SupervisionsController extends Controller
       ->groupBy(DB::raw('YEAR(periode_date), MONTH(periode_date)'), 'payments_type')
       ->get();
 
-
       $q = DB::table('tr_invoices')
       ->selectRaw('
         YEAR(periode_date) as periode_year,
@@ -82,7 +82,22 @@ class SupervisionsController extends Controller
       ->where('tr_invoices.id', 'like', 'INV-'.$va.'%')
       ->groupBy(DB::raw('MONTH(periode_date)'))
       ->get();
-
+      
+      /*$q = DB::connection('finance_db')->table('journal_logs')
+      ->selectRaw('
+      	YEAR(date) as periode_year,
+      	MONTH(date) as periode_month,
+      	SUM(IFNULL(debit, 0)) as total_invoice
+      ')
+      ->whereBetween('date', [$year.'-07-01', ($year+1).'-06-30'])
+      ->where('code_of_account', $coa)
+      ->where('units_id', $unitId)
+      ->groupBy(DB::raw('MONTH(date)'))
+      ->get();
+      
+      var_dump($q);
+	  */
+	  
       $details = DB::table('tr_invoices')
       ->selectRaw('
         tr_payment_details.nominal as total_nominal,
