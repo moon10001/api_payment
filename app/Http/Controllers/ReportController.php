@@ -132,58 +132,81 @@ class ReportController extends Controller
       $paralel = null;
       $jurusan = null;
 
-	  $periodsId = DB::connection('academics')->table('periods')
-	  	->where('name_period', 'like', $startYear.'%')
-	  	->whereIn('units_id', $unitIds)
-	  	->where('organizations_id', 3)
-	  	->first();	  
-	      
+      $periodsId = DB::connection('academics')->table('periods')
+        ->where('name_period', 'like', $startYear.'%')
+        ->whereIn('units_id', $unitIds)
+        ->where('organizations_id', 3)
+        ->first();	  
+          
       $students = DB::connection('academics')->table('student_profile')
       ->select('no_va', 'no_va as id', DB::raw('CONCAT(first_name, " ", last_name) as name'))
       ->join('class_div', 'class_div.students_id', 'student_profile.id')
       ->whereIn('student_profile.units_id', $unitIds)
       ->where('class_div.classrooms_id', $classroomsId)
-   	  ->where('periods_id', $periodsId->id)
-   	  ->where('class_div.is_approve', 1)
-   	  ->orderBy('student_profile.first_name', 'asc')
-   	  ->orderBy('student_profile.last_name', 'asc')
+      ->where('periods_id', $periodsId->id)
+      ->where('class_div.is_approve', 1)
+      ->orderBy('student_profile.first_name', 'asc')
+      ->orderBy('student_profile.last_name', 'asc')
       ->get();
       
       $monthlyTotal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-	  $expected = DB::table('tr_invoices')
-	  ->select(
-	      '*',
-	      'payments_date',
-	      DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
-	      DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
-	      DB::raw('YEAR(payments_date) as payment_year'),
-	      DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
-	   )
-	  ->whereBetween('periode_date', [$startYear.'-07-01', $endYear.'-06-31'])
-	  ->whereIn('temps_id', $students->pluck('no_va')->toArray())
-	  ->where('tr_invoices.id','like','INV-%')
-	  ->orderBy('periode_date', 'ASC')
-	  ->get();
-	          	                                                                   
-      $invoices = DB::table('tr_invoices')
+      $expected = DB::table('tr_invoices')
       ->select(
-        '*',
-        'payments_date',
-        DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
-        DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
-        DB::raw('YEAR(payments_date) as payment_year'),
-        DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
+          '*',
+          'payments_date',
+          DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
+          DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
+          DB::raw('YEAR(payments_date) as payment_year'),
+          DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
       )
-      ->whereRaw('DATE(payments_date) between ? and ?', [$startYear.'-07-01', $endYear.'-06-31'])
+      ->whereBetween('periode_date', [$startYear.'-07-01', $endYear.'-06-31'])
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
       ->where('tr_invoices.id','like','INV-%')
+      ->orderBy('periode_date', 'ASC')
       ->get();
-      
+                                                                                  
+      // $invoices = DB::table('tr_invoices')
+      //   ->select(
+      //     '*',
+      //     'payments_date',
+      //     DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
+      //     DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
+      //     DB::raw('YEAR(payments_date) as payment_year'),
+      //     DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
+      //   )
+      //   ->whereRaw('DATE(payments_date) between ? and ?', [$startYear.'-07-01', $endYear.'-06-31'])
+      //   ->whereIn('temps_id', $students->pluck('no_va')->toArray())
+      //   ->where('tr_invoices.id','like','INV-%')
+      //  ->get();
+      $invoices = collect(DB::select('
+        SELECT
+          tr_invoices.*,
+          @temp_date := COALESCE(mt940.payment_date, tr_faspay.settlement_date) as payments_date,
+          DATE_FORMAT(@temp_date, "%d-%m-%y") as paymentd_date_formatted,
+          DATE_FORMAT(@temp_date, "%m") as payment_month,
+          YEAR(@temp_date) as payment_year,
+          (SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total
+        FROM 
+          tr_invoices
+        LEFT JOIN mt940 
+        ON 
+          mt940.id = tr_invoices.mt940_id 
+        LEFT JOIN tr_faspay
+        ON
+        tr_faspay.id = tr_invoices.faspay_id
+        WHERE DATE(periode_date) between ? AND ?
+        AND tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
+        AND tr_invoices.id like "INV-%"
+      ', [
+        $startYear.'-07-01', 
+        $endYear.'-06-31'
+      ]));
+      //var_dump($invoices, join(',', $students->pluck('no_va')->toArray()));
       $outstanding = DB::table('tr_invoices')
       ->select(
-      	DB::raw('SUM(nominal) as total'),
-      	'temps_id'
+        DB::raw('SUM(nominal) as total'),
+        'temps_id'
       )
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
       ->where('periode_date', '<=', $endYear.'-06-01')
@@ -192,25 +215,25 @@ class ReportController extends Controller
       ->groupBy('temps_id')
       ->get();
 
-	  foreach($students as $key => &$item) {
-	  	$filteredInvoices = $invoices->where('temps_id', $item->no_va);
-	  	$filteredExpected = $expected->where('temps_id', $item->no_va);
-	  	$filteredOutstanding = $outstanding->where('temps_id', $item->no_va);
+      foreach($students as $key => &$item) {
+        $filteredInvoices = $invoices->where('temps_id', $item->no_va);
+        $filteredExpected = $expected->where('temps_id', $item->no_va);
+        $filteredOutstanding = $outstanding->where('temps_id', $item->no_va);
         $mappedInvoices = $filteredInvoices->where('payments_date', '!=', null)
-        	->whereBetween('payment_year', [$startYear, $endYear]) 
-        	->groupBy('payment_month')
-        	->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
-          		$timestamp = strtotime($key);
-	        	$month = $key;
-	        	$values = $item->values();
-          		$total = $values->sum('total');
-        	  	$monthlyTotal[intval($month)-1] = $monthlyTotal[intval($month)-1] + $total;
-         		return [
-            		intval($month) => $total
-          		];
-        	});
+        ->whereBetween('payment_year', [$startYear, $endYear]) 
+        ->groupBy('payment_month')
+        ->mapWithKeys(function($item, $key) use(&$monthlyTotal) {
+          $timestamp = strtotime($key);
+          $month = $key;
+          $values = $item->values();
+          $total = $values->sum('total');
+          $monthlyTotal[intval($month)-1] = $monthlyTotal[intval($month)-1] + $total;
+          return [
+              intval($month) => $total
+          ];
+        });
 
-	    $item->amount = $filteredExpected->isNotEmpty() ? $filteredExpected->first()->nominal : 0;
+        $item->amount = $filteredExpected->isNotEmpty() ? $filteredExpected->first()->nominal : 0;
         $item->invoices = $mappedInvoices;
         $item->total_invoices = $filteredExpected->sum('total');
         $item->total_payments = $mappedInvoices->sum();
