@@ -48,7 +48,7 @@ class ExportPGToJournalsJob extends Job
         if($date != '') {
           $this->date = $date;
         } else {
-          $this->date = date('Y-m-d');
+          $this->date = date('Y-m-d', strtotime("-1 days"));
         }
     }
 

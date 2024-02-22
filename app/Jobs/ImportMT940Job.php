@@ -47,9 +47,9 @@ class ImportMT940Job extends Job
     }
 
     private function updateTrInvoice($id, $paymentDate) {
-      echo('Updating TR INVOICE'."\n");
-      echo('---ID          : '.$id."\n");
-      echo('---Payment Date: '.$paymentDate."\n");
+//      echo('Updating TR INVOICE'."\n");
+//      echo('---ID          : '.$id."\n");
+//      echo('---Payment Date: '.$paymentDate."\n");
 
       return DB::table('tr_invoices')
       ->where('id', $id)
@@ -61,7 +61,7 @@ class ImportMT940Job extends Job
     }
 
     private function insertTrInvoiceDetails($invoiceId, $data) {
-      echo('Inserting Invoice Details'."\n");
+      //echo('Inserting Invoice Details'."\n");
 
       return DB::table('tr_invoice_details')
       ->updateOrInsert([
@@ -86,7 +86,7 @@ class ImportMT940Job extends Job
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
 
-      echo('Inserting MT940'."\n");
+/*      echo('Inserting MT940'."\n");
       echo('---VA          : '.$data['va']."\n");
       echo('---Temps ID    : '.$data['temps_id']."\n");
       echo('---Payment Date: '.$data['payments_date']."\n");
@@ -95,7 +95,7 @@ class ImportMT940Job extends Job
       echo('---Nominal     : '.$data['nominal']."\n");
       echo('---Diff        : '.$data['diff']."\n");
       echo('---Mismatch    : '.$data['mismatch']."\n");
-
+*/
       $id = DB::table('mt940')
       ->insertGetId([
         'va' => $data['va'],
@@ -119,7 +119,7 @@ class ImportMT940Job extends Job
     	->where('filename', $filename)
     	->where('status', 'PROCESSED')
     	->get();
-      echo('Imported: '.($res->count() >= 1)."\n");
+      //echo('Imported: '.($res->count() >= 1)."\n");
     	return $res->count() >= 1;
     }
 
@@ -214,7 +214,7 @@ class ImportMT940Job extends Job
       $rowCount = 0;
       $response = [];
       $files = [];
-      echo('PROCESSING MT940 BEGINS'."\n");
+      //echo('PROCESSING MT940 BEGINS'."\n");
 
       try {
         $invoicesIds = [];
@@ -224,7 +224,7 @@ class ImportMT940Job extends Job
             continue;
           }
           $this->logMT940File($filename);
-          echo('Processing: '.$filename."\n");
+          //echo('Processing: '.$filename."\n");
           $mt940 = [];
           $fileDate = substr($filename, 18, 8);
           $paymentYear = substr($fileDate, 0, 4);
@@ -258,18 +258,15 @@ class ImportMT940Job extends Job
                     $periode_from = date('my', $fromTimestamp);
                   } else {
                     $term = substr($periode, 5, 3);
-                    $id = 'UPP-' . $tempsId . $term;
-                    if(str_starts_with($periode, '41101')) {
-                      $id = 'DPP-' . $tempsId . $term;
-                      $periode_to = '41101'.$term;
-                      $periode_from = '41101'.$term;
-                    }else if(str_starts_with($periode, '42101')) {
-                      $id = 'UPD-' . $tempsId . $term;
-                      $periode_to = '42101'.$term;
-                      $periode_from = '42101'.$term;
-                    }
-					$periode_to = '41201'.$term;
-					$periode_from = '41201'.$term;
+                    $coa = substr($periode, 0, 5);
+                    $prmPayment = DB::table('prm_payments')
+                    	->where('coa', $coa)
+                    	->where('is_routine', 0)
+                    	->where('is_active', 1)
+                    	->first();
+                    $id = $prmPayment->nick_name.'-'.$tempsId.$term;
+					$periode_to = $coa.$term;
+					$periode_from = $coa.$term;
                   }
 
                   $data = array_merge($data, [
@@ -301,10 +298,10 @@ class ImportMT940Job extends Job
           });
         }
       } catch (Exception $e) {
-        error_log('Failed Reading'."\n" );
+        //error_log('Failed Reading'."\n" );
       }
-      echo('==============================================='."\n");
-      echo('Files processed: '. $fileCount."\n");
-      echo('Rows processed : '. $rowCount."\n");
+      //echo('==============================================='."\n");
+      //echo('Files processed: '. $fileCount."\n");
+      //echo('Rows processed : '. $rowCount."\n");
     }
 }

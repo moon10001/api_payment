@@ -70,7 +70,7 @@ class SupervisionsController extends Controller
       ->groupBy(DB::raw('YEAR(periode_date), MONTH(periode_date)'), 'payments_type')
       ->get();
 
-      $q = DB::table('tr_invoices')
+      $invoices = DB::table('tr_invoices')
       ->selectRaw('
         YEAR(periode_date) as periode_year,
         MONTH(periode_date) as periode_month,
@@ -83,21 +83,46 @@ class SupervisionsController extends Controller
       ->groupBy(DB::raw('MONTH(periode_date)'))
       ->get();
       
-      /*$q = DB::connection('finance_db')->table('journal_logs')
+      $paymentH2H = DB::connection('finance_db')->table('journal_logs')
       ->selectRaw('
       	YEAR(date) as periode_year,
       	MONTH(date) as periode_month,
-      	SUM(IFNULL(debit, 0)) as total_invoice
+      	SUM(IFNULL(credit, 0)) as total_paid
       ')
       ->whereBetween('date', [$year.'-07-01', ($year+1).'-06-30'])
+      ->where('journal_number', 'like', 'H2H%')
+      ->where('code_of_account', $coa)
+      ->where('units_id', $unitId)
+      ->groupBy(DB::raw('MONTH(date)'))
+      ->get();	 
+      
+	  $paymentPG = DB::connection('finance_db')->table('journal_logs')
+      ->selectRaw('
+        YEAR(date) as periode_year,
+        MONTH(date) as periode_month,
+        SUM(IFNULL(credit, 0)) as total_paid
+      ')
+      ->whereBetween('date', [$year.'-07-01', ($year+1).'-06-30'])
+      ->where('journal_number', 'like', 'PG%')
       ->where('code_of_account', $coa)
       ->where('units_id', $unitId)
       ->groupBy(DB::raw('MONTH(date)'))
       ->get();
-      
-      var_dump($q);
-	  */
-	  
+                                                                  
+      $paymentOffline = DB::connection('finance_db')->table('journal_logs')
+      ->selectRaw('
+        YEAR(date) as periode_year,
+        MONTH(date) as periode_month,
+        SUM(IFNULL(credit, 0)) as total_paid
+      ')
+      ->whereBetween('date', [$year.'-07-01', ($year+1).'-06-30'])
+      ->where('journal_number', 'not like', 'H2H%')
+      ->where('journal_number', 'not like', 'PG%')
+      ->where('code_of_account', $coa)
+      ->where('units_id', $unitId)
+      ->groupBy(DB::raw('MONTH(date)'))
+      ->get();
+                                                                                                                                           	  
       $details = DB::table('tr_invoices')
       ->selectRaw('
         tr_payment_details.nominal as total_nominal,
@@ -134,24 +159,38 @@ class SupervisionsController extends Controller
 
   	  $res = collect([]);
       $months = ['7', '8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6'];
+      $totalInvoice = $details->sum('total_nominal');
+      $totalH2H = $paymentH2H->sum('total_paid');
+      $totalPG = $paymentPG->sum('total_paid');
+      $totalOffline = $paymentOffline->sum('total_paid');
+      $totalPaid = $totalH2H + $totalPG + $totalOffline;
   	  $summary=[
-  	  	'total' => $details->sum('total_nominal'),
+  	  	'total' => $totalInvoice,
   	  	'outstanding' => 0,
-  	  	'h2h' => $details->where('payments_type', '=', 'H2H')->whereNotNull('payments_date')->sum('total_nominal'),
-  	  	'pg' => $details->where('payments_type', '=', 'Faspay')->whereNotNull('payments_date')->sum('total_nominal'),
-  	  	'offline' => $details->where('payments_type', '=', 'Offline')->whereNotNull('payments_date')->sum('total_nominal'),
-  	  	'totalPayment' => $details->whereNotNull('payments_date')->sum('total_nominal'),
+  	  	'h2h' => $totalH2H,
+  	  	'pg' => $totalPG,
+  	  	'offline' => $totalOffline,
+  	  	'totalPayment' => $totalPaid,
   	  ];
 
-  	  $summary['outstanding'] = $summary['total'] - $summary['totalPayment'];
+  	  $summary['outstanding'] = $totalInvoice - $totalPaid;
       foreach($months as $m) {
-        $filtered = $q->where('periode_month', $m)->first();
+        $filtered = $invoices->where('periode_month', $m)->first();
+        $filteredH2H = $paymentH2H->where('periode_month', $m)->first();
+        $filteredPG = $paymentPG->where('periode_month', $m)->first();
+        $filteredOffline = $paymentOffline->where('periode_month', $m)->first();
+        
+        $totalH2H = isset($filteredH2H) ? $filteredH2H->total_paid : 0;
+        $totalPG = isset($filteredPG) ? $filteredPG->total_paid : 0;
+        $totalOffline = isset($filteredOffline) ? $filteredOffline->total_paid : 0;
+        $totalPaid = $totalH2H + $totalPG + $totalOffline;
+        
         $data = $res->where('month', '=', $m)->first();
         
         if (!$data) {
-          $data= [
+          $data = [
             'month' => $m,
-            'total' => $filtered->total_invoice,
+            'total' => isset($filtered->total_invoice) ? $filtered->total_invoice : 0,
             'outstanding' => 0,
             'h2h' => 0,
             'pg' => 0,
@@ -160,11 +199,11 @@ class SupervisionsController extends Controller
            ];
            $res->push($data);           
         }
-        $data['h2h'] = $details->where('payments_type', 'H2H')->where('periode_month', $m)->sum('total_nominal');
-        $data['pg'] = $details->where('payments_type', 'Faspay')->where('periode_month', $m)->sum('total_nominal');
-        $data['offline'] = $details->where('payments_type', 'Offline')->where('periode_month', $m)->sum('total_nominal');
-        $data['totalPayment'] = $details->where('periode_month', $m)->sum('total_nominal');
-        $data['outstanding'] = $data['total'] - $data['totalPayment'];
+        $data['h2h'] = $totalH2H;
+        $data['pg'] = $totalPG;
+        $data['offline'] = $totalOffline;
+        $data['totalPayment'] = $totalPaid;
+        $data['outstanding'] = $data['total'] - $totalPaid;
         
         $res->transform(function($item, $key) use($m, $data) {
         	if ($item['month'] == $m) {
@@ -176,6 +215,9 @@ class SupervisionsController extends Controller
       }
 
       return [
+      	'h2h' => $paymentH2H,
+      	'pg' => $paymentPG,
+      	'offline' => $paymentOffline,
         'outstanding' => $outstandingData,
       	'report' => $res->toArray(),
       	'summary' => $summary,

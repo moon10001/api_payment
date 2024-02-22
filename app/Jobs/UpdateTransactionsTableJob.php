@@ -52,7 +52,7 @@ class UpdateTransactionsTableJob extends Job
         if($date != '') {
           $this->date = $date;
         } else {
-          $this->date = date('Y-m-d');
+          $this->date = date('Y-m-d', strtotime("-1 days"));
         }
     }
 
@@ -267,7 +267,7 @@ class UpdateTransactionsTableJob extends Job
       	->select('id', 'nominal', 'va')
       	->where('payment_date', $this->date)
       	->get(); 
-      	echo("BEGIN ==== ".$this->date."\n");
+      	//echo("BEGIN ==== ".$this->date."\n");
 				$ids = $mt940->pluck('id');
 		
         $trInvoices = DB::table('tr_invoices')
@@ -285,17 +285,17 @@ class UpdateTransactionsTableJob extends Job
       			$diff = floatval($nominal) - floatval($filtered->total_inv);
       			if ($diff > 0) {
       				$total += $diff;
-				  	  echo($row->id."\n");
-              echo($row->nominal."\n");
-              echo($filtered->total_inv."\n");
-              echo($total."\n\n");
+				  	  //echo($row->id."\n");
+              //echo($row->nominal."\n");
+              //echo($filtered->total_inv."\n");
+              //echo($total."\n\n");
             }      			
       		} else {
             $diff = floatval($nominal);
             $total += $diff;
-            echo ($row->id."\n");
-            echo ($row->nominal."\n");
-            echo ($total."\n\n");
+            //echo ($row->id."\n");
+            //echo ($row->nominal."\n");
+            //echo ($total."\n\n");
           }
       	}
         if ($total > 0) {
