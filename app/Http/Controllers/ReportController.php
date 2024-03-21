@@ -195,10 +195,15 @@ class ReportController extends Controller
         LEFT JOIN tr_faspay
         ON
         tr_faspay.id = tr_invoices.faspay_id
-        WHERE DATE(periode_date) between ? AND ?
+        WHERE (
+         DATE(tr_faspay.settlement_date) between ? and ?
+         OR DATE(mt940.payment_date) between ? AND ?
+        )
         AND tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
         AND tr_invoices.id like "INV-%"
       ', [
+        $startYear.'-07-01',
+        $endYear.'06-31',
         $startYear.'-07-01', 
         $endYear.'-06-31'
       ]));
