@@ -182,8 +182,10 @@ class ReportController extends Controller
       $invoices = collect(DB::select('
         SELECT
           tr_invoices.*,
+          mt940.payment_date,
+          tr_faspay.settlement_date,
           @temp_date := COALESCE(mt940.payment_date, tr_faspay.settlement_date) as payments_date,
-          DATE_FORMAT(@temp_date, "%d-%m-%y") as paymentd_date_formatted,
+          DATE_FORMAT(@temp_date, "%d-%m-%y") as payment_date_formatted,
           DATE_FORMAT(@temp_date, "%m") as payment_month,
           YEAR(@temp_date) as payment_year,
           (SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total
@@ -191,23 +193,14 @@ class ReportController extends Controller
           tr_invoices
         LEFT JOIN mt940 
         ON 
-          mt940.id = tr_invoices.mt940_id 
+          mt940.id = tr_invoices.mt940_id AND DATE(mt940.payment_date) between "'. $startYear.'-07-01" and "'. $endYear .'-06-31"
         LEFT JOIN tr_faspay
         ON
-        tr_faspay.id = tr_invoices.faspay_id
-        WHERE (
-         DATE(tr_faspay.settlement_date) between ? and ?
-         OR DATE(mt940.payment_date) between ? AND ?
-        )
-        AND tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
+          tr_faspay.id = tr_invoices.faspay_id AND DATE(tr_faspay.settlement_date) between "'. $startYear.'-07-01" and "'. $endYear.'-06-31"
+        WHERE 
+        tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
         AND tr_invoices.id like "INV-%"
-      ', [
-        $startYear.'-07-01',
-        $endYear.'06-31',
-        $startYear.'-07-01', 
-        $endYear.'-06-31'
-      ]));
-      //var_dump($invoices, join(',', $students->pluck('no_va')->toArray()));
+      '));
       $outstanding = DB::table('tr_invoices')
       ->select(
         DB::raw('SUM(nominal) as total'),
@@ -238,6 +231,9 @@ class ReportController extends Controller
           ];
         });
 
+		$item->startYear = $startYear;
+		$item->endYear = $endYear;
+		$item->filteredInvoices = $filteredInvoices;
         $item->amount = $filteredExpected->isNotEmpty() ? $filteredExpected->first()->nominal : 0;
         $item->invoices = $mappedInvoices;
         $item->total_invoices = $filteredExpected->sum('total');
