@@ -54,6 +54,7 @@ class ImportFaspayJob extends Job
     	->where('status', 'PROCESSED')
     	->get();
       	echo('Imported: ' .$res->count()."\n");
+      	app('log')->channel('slack')->info('Successfully imported '.$filename);        
     	return $res->count() >= 1;
     }
 
@@ -84,7 +85,8 @@ class ImportFaspayJob extends Job
       $response = [];
       $files = [];
       echo('PROCESSING FASPAY BEGINS'."\n");
-
+      app('log')->channel('slack')->info(date('Y-m-d h:i:s') . ' - Processing Faspay');
+        
       try {
         $invoicesIds = [];
         foreach(Storage::disk('faspay')->files('/') as $filename) {
@@ -134,6 +136,7 @@ class ImportFaspayJob extends Job
             } catch (Exception $e) {
               error_log('Failed processing : '. $filename);
               $this->logMT940File($filename, 'FAILED', $e->getMessage());
+              app('log')->channel('slack')->error('FAILED - '.$filename);        
               throw $e;
             } finally {
               echo('Finished processing: '. $filename."\n");

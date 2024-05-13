@@ -166,19 +166,6 @@ class ReportController extends Controller
       ->orderBy('periode_date', 'ASC')
       ->get();
                                                                                   
-      // $invoices = DB::table('tr_invoices')
-      //   ->select(
-      //     '*',
-      //     'payments_date',
-      //     DB::raw('DATE_FORMAT(payments_date, "%d-%m-%Y") as payments_date_formatted'),
-      //     DB::raw('DATE_FORMAT(payments_date,"%m") as payment_month'),
-      //     DB::raw('YEAR(payments_date) as payment_year'),
-      //     DB::raw('(SELECT SUM(nominal) FROM tr_payment_details WHERE invoices_id = tr_invoices.id) as total')
-      //   )
-      //   ->whereRaw('DATE(payments_date) between ? and ?', [$startYear.'-07-01', $endYear.'-06-31'])
-      //   ->whereIn('temps_id', $students->pluck('no_va')->toArray())
-      //   ->where('tr_invoices.id','like','INV-%')
-      //  ->get();
       $invoices = collect(DB::select('
         SELECT
           tr_invoices.*,
@@ -201,6 +188,7 @@ class ReportController extends Controller
         tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
         AND tr_invoices.id like "INV-%"
       '));
+
       $outstanding = DB::table('tr_invoices')
       ->select(
         DB::raw('SUM(nominal) as total'),
@@ -209,6 +197,9 @@ class ReportController extends Controller
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
       ->where('periode_date', '<=', $endYear.'-06-01')
       ->whereNull('payments_date')
+      ->where(function($q) {
+      	$q->whereNull('faspay_id')->whereNull('mt940_id');
+      })
       ->where('id', 'like', 'INV-%')
       ->groupBy('temps_id')
       ->get();

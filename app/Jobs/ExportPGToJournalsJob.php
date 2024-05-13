@@ -42,9 +42,13 @@ class ExportPGToJournalsJob extends Job
      *
      * @return void
      */
-    public function __construct($date = '')
+    public function __construct($date = '', $unitsId = '')
     {
-    	$this->units = DB::table('api_kliksekolah.prm_school_units')->get();
+   		if ($unitsId != '') {
+   		    $this->units = DB::table('api_kliksekolah.prm_school_units')->where('id', $unitsId)->get();
+   		} else {
+    		$this->units = DB::table('api_kliksekolah.prm_school_units')->get();
+    	}
         if($date != '') {
           $this->date = $date;
         } else {
@@ -60,11 +64,16 @@ class ExportPGToJournalsJob extends Job
     public function handle()
     {
       try {
+        app('log')->channel('slack')->info('Exporting PG to journals');        
         $this->logPGToJournal();
+        app('log')->channel('slack')->info('Exporting payment details to journals');        
         $this->logDetailsToJournal();
+        app('log')->channel('slack')->info('Exporting payment details to journals');             
         $this->logDiscountsToJournal();
+        app('log')->channel('slack')->info('Checking and handling overpaid invoices');        
         $this->handleOverpaid();
       } catch (Exception $e) {
+        app('log')->channel('slack')->error($e->getMessage());      
         throw $e;
       }
     }
@@ -295,6 +304,7 @@ class ExportPGToJournalsJob extends Job
           ]);
         } 
       } catch (Exception $e) {
+        app('log')->channel('slack')->error($e->message());      
       	throw $e;
       }
     }

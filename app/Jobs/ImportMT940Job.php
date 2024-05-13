@@ -214,8 +214,9 @@ class ImportMT940Job extends Job
       $rowCount = 0;
       $response = [];
       $files = [];
-      //echo('PROCESSING MT940 BEGINS'."\n");
 
+      app('log')->channel('slack')->info('Processing MT940');
+              
       try {
         $invoicesIds = [];
         foreach(Storage::disk('mt940')->files('/') as $filename) {
@@ -291,6 +292,7 @@ class ImportMT940Job extends Job
               $this->insert($mt940);
             } catch (Exception $e) {
               error_log('Failed processing : '. $filename);
+              app('log')->channel('slack')->error($e->message());              
               throw $e;
             } finally {
               $this->logMT940File($filename, 'PROCESSED');
@@ -299,6 +301,7 @@ class ImportMT940Job extends Job
         }
       } catch (Exception $e) {
         //error_log('Failed Reading'."\n" );
+        app('log')->channel('slack')->error($e->message());        
       }
       //echo('==============================================='."\n");
       //echo('Files processed: '. $fileCount."\n");

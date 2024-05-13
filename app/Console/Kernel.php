@@ -5,10 +5,12 @@ namespace App\Console;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
+use App\Jobs\ImportMT940Job;
 use App\Jobs\ReconcilePaymentJob;
 use App\Jobs\ImportFaspayJob;
 use App\Jobs\ExportPGToJournalsJob;
 use App\Jobs\UpdateTransactionsTableJob;
+use App\Jobs\TestJob;
 
 class Kernel extends ConsoleKernel
 {
@@ -28,9 +30,12 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->job((new ReconcilePaymentJob()))->cron('* 4 * * *');
-        $schedule->job((new UpdateTransactionsTableJob()))->cron('40 4 * * *');
-        $schedule->job((new ImportFaspayJob()))->cron('30 3 * * *');
-        $schedule->job((new ExportPGToJournalsJob()))->cron('30 5 * * *');
+    	$schedule->job((new ImportMT940Job())->chain([
+        	new ReconcilePaymentJob(),
+        	new UpdateTransactionsTableJob()
+        ]))->cron('0 18 * * *');
+        $schedule->job((new ImportFaspayJob())->chain([
+        	new ExportPGToJournalsJob()
+        ]))->cron('0 22 * * *');
     }    
 }

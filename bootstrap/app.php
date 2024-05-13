@@ -75,6 +75,7 @@ $app->configure('filesystems');
 $app->configure('tinker');
 $app->configure('database');
 $app->configure('queue');
+$app->configure('logging');
 
 /*
 |--------------------------------------------------------------------------
