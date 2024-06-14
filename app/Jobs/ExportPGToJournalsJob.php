@@ -14,6 +14,9 @@ class ExportPGToJournalsJob extends Job
     private $bankCoa = '11301';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
+    
+    public $tries = 3;
+    public $timeout = 900;
 
     private $detailJournalNumber = [];
     private $paymentCoa = [
@@ -76,6 +79,10 @@ class ExportPGToJournalsJob extends Job
         app('log')->channel('slack')->error($e->getMessage());      
         throw $e;
       }
+    }
+    
+    public function retryUntil() {
+    	return now()->addMinutes(10);
     }
     
     public function logPGToJournal() {

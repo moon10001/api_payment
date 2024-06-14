@@ -39,6 +39,8 @@ class UpdateTransactionsTableJob extends Job
       'DPP' => 41101,
       'UPP' => 41201,
     ];
+    
+    public $timeout = 900;
     /**
      * Create a new job instance.
      *
@@ -73,6 +75,7 @@ class UpdateTransactionsTableJob extends Job
         $this->logDiscountsToJournal();
         $this->handleMT940ForcedOK();
       } catch (Exception $e) {
+        app('log')->channel('slack')->error($e->getMessage());      
         throw $e;
       }
     }
@@ -101,6 +104,7 @@ class UpdateTransactionsTableJob extends Job
     }
 
     private function logJournal($data) {
+        app('log')->channel('slack')->info('Exporting H2H to journals ---'. $this->date);    
         DB::connection('finance_db')->table('journal_logs')->insert([
           'journals_id' => 0,
           'journal_number' => $data['journal_number'],
@@ -221,6 +225,7 @@ class UpdateTransactionsTableJob extends Job
         ]);
       }
     }
+    
     public function logDiscountsToJournal() {
       $result = DB::select(DB::raw('
         SELECT 
@@ -330,6 +335,8 @@ class UpdateTransactionsTableJob extends Job
           ]);
         } 
       } catch (Exception $e) {
+        app('log')->channel('slack')->error($e->getMessage());
+              
       	throw $e;
       }
     }

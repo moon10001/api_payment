@@ -15,6 +15,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
+use App\Jobs\UpdateTransactionsTableJob;
 
 class ImportMT940Job extends Job
 {
@@ -30,6 +31,8 @@ class ImportMT940Job extends Job
     */
 
     use InteractsWithQueue, Queueable, SerializesModels;
+    
+    public $timeout = 900;
 
     private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
@@ -122,6 +125,8 @@ class ImportMT940Job extends Job
       //echo('Imported: '.($res->count() >= 1)."\n");
     	return $res->count() >= 1;
     }
+    
+    public $tries = 3;
 
     public function logMT940File($filename, $status = 'READING', $message = '') {
       DB::table('mt940_import_log')->updateOrInsert([
@@ -216,12 +221,14 @@ class ImportMT940Job extends Job
       $files = [];
 
       app('log')->channel('slack')->info('Processing MT940');
+      echo ("Processing MT940");
               
       try {
         $invoicesIds = [];
         foreach(Storage::disk('mt940')->files('/') as $filename) {
           $file = Storage::disk('mt940')->get($filename);
           if ($this->fileHasBeenImported($filename)) {
+            app('log')->channel('slack')->error($filename . ' has been imported before.');
             continue;
           }
           $this->logMT940File($filename);
@@ -299,12 +306,20 @@ class ImportMT940Job extends Job
             }
           });
         }
+        if ($fileCount > 0) {
+        	dispatch(new UpdateTransactionsTableJob);
+        }
       } catch (Exception $e) {
-        //error_log('Failed Reading'."\n" );
+        error_log('Failed Reading'."\n" );
+        
         app('log')->channel('slack')->error($e->message());        
       }
       //echo('==============================================='."\n");
       //echo('Files processed: '. $fileCount."\n");
       //echo('Rows processed : '. $rowCount."\n");
+    }
+    
+    public function retryUntil() {
+    	return now()->addMinutes(10);
     }
 }

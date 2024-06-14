@@ -5,6 +5,7 @@ namespace App\Jobs;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Bus\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable; 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Queue\InteractsWithQueue;
@@ -31,17 +32,18 @@ class TestJob extends Job
     |
     */
 
-    use InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
 
     public function handle() {
     	echo("Running TestJob");
     	//$output = new ConsoleOutput();
-    	for($i=0; $i<10;$i++) {
-    	//$output->writeln('Test Job '.$i);
-    	Log::info('Test Job'.$i);
-    	app('log')->channel('slack')->info('Test Job'.$i);
-    	
+    	app('log')->channel('slack')->info('Test Job');
+    	            
+    	for($i=0; $i<2; $i++) {
+    		//$output->writeln('Test Job '.$i);
+    		Log::info('Test Job'.$i);
+    		app('log')->channel('slack')->info('Test Job'.$i);
     	}
     }
 }

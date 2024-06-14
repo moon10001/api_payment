@@ -195,11 +195,11 @@ class ReportController extends Controller
         'temps_id'
       )
       ->whereIn('temps_id', $students->pluck('no_va')->toArray())
-      ->where('periode_date', '<=', $endYear.'-06-01')
-      ->whereNull('payments_date')
+      ->where('periode_date', '<=', $endYear.'-06-31')
       ->where(function($q) {
       	$q->whereNull('faspay_id')->whereNull('mt940_id');
       })
+      ->whereNull('payments_date')
       ->where('id', 'like', 'INV-%')
       ->groupBy('temps_id')
       ->get();

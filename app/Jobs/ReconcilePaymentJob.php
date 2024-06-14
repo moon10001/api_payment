@@ -10,6 +10,8 @@ use Carbon\Carbon;
 class ReconcilePaymentJob extends Job
 {
     protected $date;
+    
+    public $timeout = 900;
 
     public function __construct($date = '') {
       if ($date != '') {

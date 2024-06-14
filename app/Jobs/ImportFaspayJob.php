@@ -17,6 +17,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
+use App\Jobs\ExportPGToJournalsJob;
 
 class ImportFaspayJob extends Job
 {
@@ -32,6 +33,9 @@ class ImportFaspayJob extends Job
     */
 
     use InteractsWithQueue, Queueable, SerializesModels;
+    
+    public $tries = 3;
+    public $timeout = 900;
 
     private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
@@ -84,7 +88,6 @@ class ImportFaspayJob extends Job
       $totalRowCount = 0;
       $response = [];
       $files = [];
-      echo('PROCESSING FASPAY BEGINS'."\n");
       app('log')->channel('slack')->info(date('Y-m-d h:i:s') . ' - Processing Faspay');
         
       try {
@@ -93,7 +96,7 @@ class ImportFaspayJob extends Job
           $rowCount = 0;
           $file = Storage::disk('faspay')->get($filename);
           if ($this->fileHasBeenImported($filename)) {
-            echo($filename. ' had been imported'."\n");
+            app('log')->channel('slack')->error($filename . ' has been imported before.');            
             continue;
           }
           $this->logMT940File($filename);
@@ -145,6 +148,9 @@ class ImportFaspayJob extends Job
               $this->logMT940File($filename, 'PROCESSED');
             }
           });
+        }
+        if ($fileCount > 0) {
+        	dispatch(new ExportPGToJournalsJob);
         }
       } catch (Exception $e) {
         error_log('Failed Reading'."\n" );

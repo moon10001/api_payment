@@ -30,12 +30,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-    	$schedule->job((new ImportMT940Job())->chain([
-        	new ReconcilePaymentJob(),
-        	new UpdateTransactionsTableJob()
-        ]))->cron('0 18 * * *');
-        $schedule->job((new ImportFaspayJob())->chain([
-        	new ExportPGToJournalsJob()
-        ]))->cron('0 22 * * *');
+    	$schedule->job((new TestJob))->cron('* 23 * * *');
+    	$schedule->job((new ImportMT940Job))->cron('5 22 * * *');
+        $schedule->job((new ImportFaspayJob))->cron('10 22 * * *');
     }    
 }
