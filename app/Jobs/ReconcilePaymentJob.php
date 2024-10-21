@@ -10,12 +10,14 @@ use Carbon\Carbon;
 class ReconcilePaymentJob extends Job
 {
     protected $date;
+    
+    public $timeout = 900;
 
     public function __construct($date = '') {
       if ($date != '') {
         $this->date = $date;
       } else {
-	       $this->date = date('Y-m-d');
+	       $this->date = date('Y-m-d', strtotime("-1 days"));
       }
     }
     /**
@@ -32,7 +34,7 @@ class ReconcilePaymentJob extends Job
 	      
        	$transactions = DB::connection('mysql')->table('mt940')
        	->select(
-       		'tr_invoices.payments_date as payment_date',
+       		'mt940.payment_date',
        		'prm_payments.id as prm_payments_id',
        		DB::raw(
        			'SUBSTR(mt940.temps_id, 1, 3) as units_id'
@@ -47,12 +49,38 @@ class ReconcilePaymentJob extends Job
        		$join->on('tr_payment_details.invoices_id', '=','tr_invoices.id');
    		})
       	->join('prm_payments', 'tr_payment_details.payments_id', 'prm_payments.id')
-      	->join('prm_va', 'prm_va.va_code', 'mt940.va_code')
        	->where('mt940.payment_date', $this->date)
        	->groupBy('units_id', 'mt940.payment_date', 'prm_payments.id', 'prm_payments.coa')
        	->orderBy('mt940.payment_date', 'ASC')->get();
+
+
+		$discounts = DB::table('tr_payment_discounts')
+		->select(DB::raw('SUM(tr_payment_discounts.nominal) as discount, payments_id'))
+		->join('tr_invoices', 'tr_invoices.id', 'tr_payment_discounts.invoices_id')
+		->join('mt940', 'mt940.id', 'tr_invoices.mt940_id')
+		->where('mt940.payment_date', $this->date)
+		->groupBy('payments_id')
+		->get();
+				       	
+		var_dump($discounts);
+       	$fixedTransactions = $transactions->map(function ($item, $key) use ($unitsVA, $discounts) {
+       		$discount = $discounts->first(function($value, $key) use($item) {
+       			return $value->payments_id == $item->prm_payments_id;
+       		});
+       		
+       		$va = $unitsVA->first(function ($value, $key) use ($item)  {
+       			return $value->va_code == $item->units_id;
+       		});
+
+       		if ($discount != null) {
+       			echo ('DISCOUNT '. $item->nominal . ' - ' . $discount->discount);
+	       		$item->nominal = $item->nominal - $discount->discount;
+       		}
+       		$item->units_id = $va->unit_id;
+       		return $item;
+       	});
        	
-		$arr = $transactions->map(function($o) { return (array) $o; })->toArray();
+		$arr = $fixedTransactions->map(function($o) { return (array) $o; })->toArray();
 
       	DB::connection('report_db')->table('daily_reconciled_reports')->insert($arr);
 

@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,6 +15,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
+use App\Jobs\UpdateTransactionsTableJob;
 
 class ImportMT940Job extends Job
 {
@@ -28,10 +31,12 @@ class ImportMT940Job extends Job
     */
 
     use InteractsWithQueue, Queueable, SerializesModels;
+    
+    public $timeout = 900;
 
     private function getTrInvoice($id, $tempsId = '') {
       $trInvoice = DB::table('tr_invoices')
-      ->select('id', 'nominal', 'payments_date')
+      ->select('id', 'nominal', 'payments_date', 'collectible_name')
       ->where('id', $id)
       ->first();
 
@@ -45,9 +50,9 @@ class ImportMT940Job extends Job
     }
 
     private function updateTrInvoice($id, $paymentDate) {
-      echo('Updating TR INVOICE'."\n");
-      echo('---ID          : '.$id."\n");
-      echo('---Payment Date: '.$paymentDate."\n");
+//      echo('Updating TR INVOICE'."\n");
+//      echo('---ID          : '.$id."\n");
+//      echo('---Payment Date: '.$paymentDate."\n");
 
       return DB::table('tr_invoices')
       ->where('id', $id)
@@ -59,7 +64,7 @@ class ImportMT940Job extends Job
     }
 
     private function insertTrInvoiceDetails($invoiceId, $data) {
-      echo('Inserting Invoice Details'."\n");
+      //echo('Inserting Invoice Details'."\n");
 
       return DB::table('tr_invoice_details')
       ->updateOrInsert([
@@ -84,7 +89,7 @@ class ImportMT940Job extends Job
       $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
       $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
 
-      echo('Inserting MT940'."\n");
+/*      echo('Inserting MT940'."\n");
       echo('---VA          : '.$data['va']."\n");
       echo('---Temps ID    : '.$data['temps_id']."\n");
       echo('---Payment Date: '.$data['payments_date']."\n");
@@ -93,7 +98,7 @@ class ImportMT940Job extends Job
       echo('---Nominal     : '.$data['nominal']."\n");
       echo('---Diff        : '.$data['diff']."\n");
       echo('---Mismatch    : '.$data['mismatch']."\n");
-
+*/
       $id = DB::table('mt940')
       ->insertGetId([
         'va' => $data['va'],
@@ -114,12 +119,14 @@ class ImportMT940Job extends Job
 
     private function fileHasBeenImported($filename) {
     	$res = DB::table('mt940_import_log')
-    	->where('filename', '"'.$filename.'"')
-    	->where('status', '"'.'PROCESSED'.'"')
+    	->where('filename', $filename)
+    	->where('status', 'PROCESSED')
     	->get();
-      echo('Imported: '.($res->count() >= 1)."\n");
+      //echo('Imported: '.($res->count() >= 1)."\n");
     	return $res->count() >= 1;
     }
+    
+    public $tries = 3;
 
     public function logMT940File($filename, $status = 'READING', $message = '') {
       DB::table('mt940_import_log')->updateOrInsert([
@@ -151,7 +158,26 @@ class ImportMT940Job extends Job
               $fromTimestamp = mktime(0, 0, 0, $fromMonth, 1, '20'.$fromYear);
               $toTimestamp = mktime(0, 0, 0, $toMonth, 1, '20'.$toYear);
 
-              $datediff = round(($toTimestamp - $fromTimestamp)/(60 * 60 * 24 * 30));
+              $iyear = intval($fromYear);
+              $imonth = intval($fromMonth);
+              
+              while(str_pad($iyear, 2, 0, STR_PAD_LEFT).str_pad($imonth, 2, 0, STR_PAD_LEFT) != $toYear.$toMonth) {
+                $imonth ++;
+                if ($imonth > 12) {
+                  $imonth = 1;
+                  $iyear ++;
+                }
+                $id = 'INV-' . $data['temps_id'] . str_pad($iyear, 2, 0, STR_PAD_LEFT) . str_pad($imonth, 2, 0, STR_PAD_LEFT);
+                
+                $trInvoice = $this->getTrInvoice($id);
+                if ($trInvoice) {
+                  array_push($trInvoiceIds, $trInvoice->id);
+                  $sum = $trInvoice->nominal + $sum;
+                  $this->updateTrInvoice($id, $data['payments_date']);
+                  $this->insertTrInvoiceDetails($id, $data);
+                }
+              }
+              /*$datediff = round(($toTimestamp - $fromTimestamp)/(60 * 60 * 24 * 30));
               $currentTimestamp = $fromTimestamp;
               for ($i = 1; $i <= $datediff; $i++) {
                 $currentTimestamp = strtotime('next month', $currentTimestamp);
@@ -165,7 +191,7 @@ class ImportMT940Job extends Job
                   $this->updateTrInvoice($id, $data['payments_date']);
                   $this->insertTrInvoiceDetails($id, $data);
                 }
-              }
+              }*/
             }
 
             $data = array_merge($data, [
@@ -173,7 +199,18 @@ class ImportMT940Job extends Job
               'mismatch' => floatval($sum) !== floatval($data['nominal'])
             ]);
             $id = $this->insertMT940($data);
-            DB::table('tr_invoices')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
+            $updateResult = DB::table('tr_invoices')->whereNull('mt940_id')->whereIn('id', $trInvoiceIds)->update(['mt940_id' => $id]);
+
+            if($updateResult === 0) {
+            	DB::table('mt940_duplicates')
+            	->insert([
+            		'mt940_id' => $id,
+            		'va' => $data['va'],
+            		'temps_id' => $data['temps_id'],
+            		'created_at' => Carbon::now(),
+            		'updated_at' => Carbon::now()
+            	]);
+            }
         }
     }
 
@@ -182,17 +219,20 @@ class ImportMT940Job extends Job
       $rowCount = 0;
       $response = [];
       $files = [];
-      echo('PROCESSING MT940 BEGINS'."\n");
 
+      app('log')->channel('slack')->info('Processing MT940');
+      echo ("Processing MT940");
+              
       try {
         $invoicesIds = [];
         foreach(Storage::disk('mt940')->files('/') as $filename) {
           $file = Storage::disk('mt940')->get($filename);
           if ($this->fileHasBeenImported($filename)) {
+            app('log')->channel('slack')->error($filename . ' has been imported before.');
             continue;
           }
           $this->logMT940File($filename);
-          echo('Processing: '.$filename."\n");
+          //echo('Processing: '.$filename."\n");
           $mt940 = [];
           $fileDate = substr($filename, 18, 8);
           $paymentYear = substr($fileDate, 0, 4);
@@ -226,18 +266,15 @@ class ImportMT940Job extends Job
                     $periode_from = date('my', $fromTimestamp);
                   } else {
                     $term = substr($periode, 5, 3);
-                    $id = 'UPP-' . $tempsId . $term;
-                    if(str_starts_with($periode, '41101')) {
-                      $id = 'DPP-' . $tempsId . $term;
-                      $periode_to = '41101'.$term;
-                      $periode_from = '41101'.$term;
-                    }else if(str_starts_with($periode, '42101')) {
-                      $id = 'UPD-' . $tempsId . $term;
-                      $periode_to = '42101'.$term;
-                      $periode_from = '42101'.$term;
-                    }
-					$periode_to = '41201'.$term;
-					$periode_from = '41201'.$term;
+                    $coa = substr($periode, 0, 5);
+                    $prmPayment = DB::table('prm_payments')
+                    	->where('coa', $coa)
+                    	->where('is_routine', 0)
+                    	->where('is_active', 1)
+                    	->first();
+                    $id = $prmPayment->nick_name.'-'.$tempsId.$term;
+					$periode_to = $coa.$term;
+					$periode_from = $coa.$term;
                   }
 
                   $data = array_merge($data, [
@@ -262,17 +299,27 @@ class ImportMT940Job extends Job
               $this->insert($mt940);
             } catch (Exception $e) {
               error_log('Failed processing : '. $filename);
+              app('log')->channel('slack')->error($e->message());              
               throw $e;
             } finally {
               $this->logMT940File($filename, 'PROCESSED');
             }
           });
         }
+        if ($fileCount > 0) {
+        	dispatch(new UpdateTransactionsTableJob);
+        }
       } catch (Exception $e) {
         error_log('Failed Reading'."\n" );
+        
+        app('log')->channel('slack')->error($e->message());        
       }
-      echo('==============================================='."\n");
-      echo('Files processed: '. $fileCount."\n");
-      echo('Rows processed : '. $rowCount."\n");
+      //echo('==============================================='."\n");
+      //echo('Files processed: '. $fileCount."\n");
+      //echo('Rows processed : '. $rowCount."\n");
+    }
+    
+    public function retryUntil() {
+    	return now()->addMinutes(10);
     }
 }

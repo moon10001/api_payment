@@ -5,6 +5,7 @@ namespace App\Jobs;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Exception;
 
 class UpdateTransactionsTableJob extends Job
 {
@@ -12,9 +13,11 @@ class UpdateTransactionsTableJob extends Job
     private $from;
     private $to;
     private $unitId;
+    private $unit;
     private $bankCoa = '11310';
     private $reconciliationCoa = '12902';
     private $destinationUnit = 95;
+    private $detailJournalNumber = [];
     private $paymentCoa = [
       'Uang Sekolah' => 41301,
       'Uang Kegiatan' => 41501,
@@ -36,6 +39,8 @@ class UpdateTransactionsTableJob extends Job
       'DPP' => 41101,
       'UPP' => 41201,
     ];
+    
+    public $timeout = 900;
     /**
      * Create a new job instance.
      *
@@ -49,9 +54,12 @@ class UpdateTransactionsTableJob extends Job
         if($date != '') {
           $this->date = $date;
         } else {
-          $this->date = date('Y-m-d');
+          $this->date = date('Y-m-d', strtotime("-1 days"));
         }
-        var_dump($date);
+    }
+
+    private function setUnit($unitId) {
+      $this->unit = DB::connection('finance_db')->table('prm_school_units')->where('id', $unitId)->first();
     }
 
     /**
@@ -62,40 +70,14 @@ class UpdateTransactionsTableJob extends Job
     public function handle()
     {
       try {
-        $data = $this->getReconciliatedData();
-        foreach($data as $unitId => $payment) {
-          $unitId = $unitId;
-          $transactions = collect($payment);
-          $date = $this->date;
-          $this->createReconciliation($unitId, $date, $transactions);
-        }
+        $this->logToJournal();
+        $this->logDetailsToJournal();
+        $this->logDiscountsToJournal();
+        $this->handleMT940ForcedOK();
       } catch (Exception $e) {
+        app('log')->channel('slack')->error($e->getMessage());      
         throw $e;
       }
-    }
-
-
-    public function getReconciliatedData() {
-      $unitId = $this->unitId;
-
-      $data = [];
-
-      DB::enableQueryLog();
-      $transactions = DB::table('daily_reconciled_reports')
-        ->join('prm_payments', 'prm_payments.id', 'daily_reconciled_reports.prm_payments_id')
-        ->whereRaw('DATE(daily_reconciled_reports.payment_date) = ?', $this->date)
-        ->orderBy('units_id', 'ASC')
-        ->get();
-
-	  var_dump(['transactions' => $transactions->count()]);
-      if ($transactions->isNotEmpty()) {
-        $data = $transactions->mapToGroups(function ($item, $key) {
-          return [$item->units_id => $item];
-        });
-      }
-      var_dump(['grouped' => count($data)]);
-
-      return $data;
     }
 
     public function generateJournalNumber($date, $unitId) {
@@ -122,6 +104,7 @@ class UpdateTransactionsTableJob extends Job
     }
 
     private function logJournal($data) {
+        app('log')->channel('slack')->info('Exporting H2H to journals ---'. $this->date);    
         DB::connection('finance_db')->table('journal_logs')->insert([
           'journals_id' => 0,
           'journal_number' => $data['journal_number'],
@@ -137,96 +120,224 @@ class UpdateTransactionsTableJob extends Job
         ]);
     }
 
-    private function createTransaction($unitId, $date, $items) {
-      $journal = [
-        'journal_number' => $this->generateJournalNumber($date, $unitId),
-        'journal_date' => $date,
-        'units_id' => $unitId,
-        'nominal' => $items->sum('nominal'),
-        'created_at' => Carbon::now(),
-        'updated_at' => Carbon::now()
-      ];
+    public function logToJournal() {
+      $mt940 = collect(DB::select(DB::raw('
+        SELECT *, SUM(tr_invoices.nominal) as total
+        FROM
+          tr_invoices
+          INNER JOIN mt940 on tr_invoices.mt940_id = mt940.id,
+          ( 
+            SELECT distinct unit_id, prm_va.va_code, name, prm_school_units.unit_code from api_kliksekolah.prm_va
+            INNER JOIN api_kliksekolah.prm_school_units on prm_school_units.id = prm_va.unit_id
+          ) b
+        WHERE 
+        mt940.payment_date = "'. $this->date . '"
+        AND b.va_code = mt940.va_code
+        GROUP BY unit_id
+      ')));
 
-      $journalId = DB::connection('finance_db')->table('journal_h2h')
-      ->insertGetId($journal);
+      foreach($mt940 as $data) {
+        $timestamp = Carbon::now();
 
-      $details = [];
-      foreach($items as $item) {
-        $coa = $this->paymentCoa[$item->name];
-        array_push($details, [
-          'journal_h2h_id' => $journalId,
-          'code_of_account' => $coa,
-          'nominal' => $item->nominal,
-          'created_at' => Carbon::now(),
-          'updated_at' => Carbon::now()
-        ]);
-      }
-
-      DB::connection('finance_db')->table('journal_h2h_details')->insert($details);
-    }
-
-    private function createReconciliation($unitId, $date, $items) {
-      $sum = $items->sum('nominal');
-      $timestamp = Carbon::now();
-      $journalNumber = $this->generateJournalNumber($date, $unitId);
-
-      foreach($items as $item) {
+        $journalNumber = $this->generateJournalNumber($this->date, 95);
         $this->logJournal([
           'journal_id' => 0,
-          'journal_number' => $journalNumber,
-          'date' => $date,
-          'code_of_account' => $item->coa,
-          'description' => $item->name,
-          'credit' => null,
-          'debit' => $item->nominal,
-          'units_id' => $unitId,
-          'countable' => 1,
-          'created_at' => $timestamp,
-          'updated_at' => $timestamp
-        ]);
-
-        $this->logJournal([
-          'journal_id' => 0,
-          'journal_number' => $journalNumber,
-          'date' => $date,
-          'code_of_account' => '12902',
-          'description' => $item->name,
-          'credit' => $item->nominal,
-          'debit' => null,
-          'units_id' => $unitId,
-          'countable' => 1,
-          'created_at' => $timestamp,
-          'updated_at' => $timestamp,
-        ]);
-      }
-
-      $journalNumber = $this->generateJournalNumber($date, 95);
-      $this->logJournal([
-        'journal_id' => 0,
         'journal_number' => $journalNumber,
-        'date' => $date,
+        'date' => $this->date,
         'code_of_account' => '11310',
-        'description' => 'Rekonsiliasi H2H',
-        'credit' => $sum,
+        'description' => 'Rekonsiliasi H2H '.$data->name,
+        'credit' => $data->total,
         'debit' => null,
         'units_id' => 95,
         'countable' => 1,
         'created_at' => $timestamp,
         'updated_at' => $timestamp
-      ]);
-      $this->logJournal([
-        'journal_id' => 0,
+        ]);
+
+        $this->logJournal([
+          'journal_id' => 0,
         'journal_number' => $journalNumber,
-        'date' => $date,
+        'date' => $this->date,
         'code_of_account' => '12902',
-        'description' => 'Rekonsiliasi H2H',
+        'description' => 'Rekonsiliasi H2H '.$data->name,
         'credit' => null,
-        'debit' => $sum,
+        'debit' => $data->total,
         'units_id' => 95,
         'countable' => 1,
         'created_at' => $timestamp,
         'updated_at' => $timestamp
-      ]);
+        ]);
 
+        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        $this->detailJournalNumber[$data->unit_id] = $journalNumber;
+        $this->logJournal([
+        'journal_id' => 0,
+        'journal_number' => $journalNumber,
+        'date' => $this->date,
+        'code_of_account' => '12902',
+        'description' => 'Rekonsiliasi H2H '.$data->name,
+        'credit' => $data->total,
+        'debit' => null,
+        'units_id' => $data->unit_id,
+        'countable' => 1,
+        'created_at' => $timestamp,
+        'updated_at' => $timestamp
+        
+      ]);
+      }
+    }
+
+    public function logDetailsToJournal() {
+      $result = DB::select(DB::raw('
+        SELECT 
+          prm_va.unit_id,
+          prm_payments.id,
+          prm_payments.name,
+          prm_payments.coa,
+          SUM(tr_payment_details.nominal) as total
+        FROM
+          tr_invoices
+        INNER JOIN
+          tr_payment_details ON tr_payment_details.invoices_id = tr_invoices.id
+        INNER JOIN
+          mt940 on mt940.id = tr_invoices.mt940_id
+        INNER JOIN api_kliksekolah.prm_va ON prm_va.va_code = mt940.va_code
+        INNER JOIN prm_payments ON prm_payments.id = tr_payment_details.payments_id
+        WHERE mt940.payment_date = "' . $this->date . '"
+        GROUP BY prm_va.unit_id, payments_id
+      '));
+
+      foreach($result as $data) {
+        $timestamp = Carbon::now();
+        $journalNumber = $this->detailJournalNumber[$data->unit_id];
+        $this->logJournal([
+          'journal_id' => 0,
+          'journal_number' => $journalNumber,
+          'date' => $this->date,
+          'code_of_account' => $data->coa,
+          'description' => $data->name,
+          'credit' => null,
+          'debit' => $data->total,
+          'units_id' => $data->unit_id,
+          'countable' => 1,
+          'created_at' => $timestamp,
+          'updated_at' => $timestamp
+        ]);
+      }
+    }
+    
+    public function logDiscountsToJournal() {
+      $result = DB::select(DB::raw('
+        SELECT 
+          prm_va.unit_id,
+          prm_payments.id,
+          prm_payments.name,
+          prm_payments.coa,
+          SUM(tr_payment_discounts.nominal) as total
+        FROM
+          tr_invoices
+        INNER JOIN
+          tr_payment_discounts ON tr_payment_discounts.invoices_id = tr_invoices.id
+        INNER JOIN
+          mt940 on mt940.id = tr_invoices.mt940_id
+        INNER JOIN 
+          api_kliksekolah.prm_va ON prm_va.va_code = mt940.va_code
+        INNER JOIN 
+          prm_payments ON prm_payments.id = tr_payment_discounts.payments_id
+        WHERE mt940.payment_date = "' . $this->date . '"
+        GROUP BY prm_va.unit_id, payments_id
+      '));
+
+      foreach($result as $data) {
+        $timestamp = Carbon::now();
+        $journalNumber = $this->generateJournalNumber($this->date, $data->unit_id);
+        $this->logJournal([
+          'journal_id' => 0,
+          'journal_number' => $journalNumber,
+          'date' => $this->date,
+          'code_of_account' => $data->coa,
+          'description' => $data->name,
+          'credit' => null,
+          'debit' => $data->total,
+          'units_id' => $data->unit_id,
+          'countable' => 1,
+          'created_at' => $timestamp,
+          'updated_at' => $timestamp
+        ]);
+      }
+    }
+    public function handleMT940ForcedOK() {
+      try {
+      	$mt940 = DB::table('mt940')
+      	->select('id', 'nominal', 'va')
+      	->where('payment_date', $this->date)
+      	->get(); 
+      	//echo("BEGIN ==== ".$this->date."\n");
+				$ids = $mt940->pluck('id');
+		
+        $trInvoices = DB::table('tr_invoices')
+        ->select(DB::raw('SUM(nominal) as total_inv, mt940_id'))
+        ->whereIn('mt940_id', $ids)
+        ->groupBy('mt940_id')
+        ->get();
+		
+		    $total = 0;
+		      	
+      	foreach($mt940 as $row) {
+      		$nominal = $row->nominal;
+      		$filtered = $trInvoices->where('mt940_id', $row->id)->first();     		
+      		if (!is_null($filtered)) {
+      			$diff = floatval($nominal) - floatval($filtered->total_inv);
+      			if ($diff > 0) {
+      				$total += $diff;
+				  	  //echo($row->id."\n");
+              //echo($row->nominal."\n");
+              //echo($filtered->total_inv."\n");
+              //echo($total."\n\n");
+            }      			
+      		} else {
+            $diff = floatval($nominal);
+            $total += $diff;
+            //echo ($row->id."\n");
+            //echo ($row->nominal."\n");
+            //echo ($total."\n\n");
+          }
+      	}
+        if ($total > 0) {
+          $journalNumber =  $this->generateJournalNumber($this->date, 95);
+
+          $this->logJournal([
+            'journal_id' => 0,
+            'journal_number' => $journalNumber,
+            'date' => $this->date,
+            'code_of_account' => '21701',
+            'description' => 'Lebih bayar H2H ',
+            'debit' => $total,
+            'credit' => null,
+            'units_id' => 95,
+            'countable' => 1,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+          ]);
+          
+          $this->logJournal([
+          	'journal_id' => 0,
+          	'journal_number' => $journalNumber,
+          	'date' => $this->date,
+          	'code_of_account' => '11310',
+          	'description' => 'Lebih bayar H2H',
+          	'debit' => null,
+          	'credit' => $total,
+          	'units_id' => 95,
+          	'countable' => 1,
+          	'created_at' => Carbon::now(),
+          	'updated_at' => Carbon::now(),
+          ]);
+        } 
+      } catch (Exception $e) {
+        app('log')->channel('slack')->error($e->getMessage());
+              
+      	throw $e;
+      }
     }
 }

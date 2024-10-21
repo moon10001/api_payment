@@ -43,6 +43,32 @@ return [
             'collation' => 'utf8_unicode_ci',
             'prefix'    => '',
             'strict'    => false,                                                                                                        
-        ]
+        ],
+        
+        'academics' => [
+        	'driver' => 'mysql',
+        	'host' => env('ACADEMICS_DB_HOST', '127.0.0.1'),
+        	'port' => env('ACADEMICS__DB_PORT', '3306'),
+        	'database' => env('ACADEMICS_DB_DATABASE', 'forge'),
+        	'username' => env('ACADEMICS_DB_USERNAME', 'forge'),
+        	'password' => env('ACADEMICS_DB_PASSWORD', ''),
+ 	       	'charset' => 'utf8',
+            'collation' => 'utf8_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+		],
+		
+		'auth' => [
+		   	'driver' => 'mysql',
+            'host' => env('AUTH_DB_HOST', '127.0.0.1'),
+            'port' => env('AUTH_DB_PORT', '3306'),
+            'database' => env('AUTH_DB_DATABASE', 'forge'),
+            'username' => env('AUTH_DB_USERNAME', 'forge'),
+            'password' => env('AUTH_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'collation' => 'utf8_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+        ],
     ],
 ];

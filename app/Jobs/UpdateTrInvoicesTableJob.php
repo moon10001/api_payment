@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\DB;
 
 class UpdateTrInvoicesTableJob extends Job
 {
+	public $timeout = 900;
+	public $tries = 3;
+	
     private $records = [];
     /**
      * Create a new job instance.

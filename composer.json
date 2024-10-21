@@ -6,11 +6,13 @@
     "type": "project",
     "require": {
         "php": "^7.3|^8.0",
-        "fruitcake/laravel-cors": "^2.0",
+        "flipbox/lumen-generator": "^9.2",
+        "fruitcake/laravel-cors": "^3.0",
         "laravel/lumen-framework": "^8.0",
         "laravel/tinker": "^2.7",
         "league/flysystem": " ~1.0",
-        "mxl/laravel-job": "^1.3"
+        "mxl/laravel-job": "^1.3",
+        "phpoffice/phpspreadsheet": "^1.29"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",

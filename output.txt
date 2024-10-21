@@ -1,0 +1,29 @@
+[2024-05-27T11:04:36+07:00] Running scheduled command: App\Jobs\ImportMT940Job
+[2024-05-27T11:05:37+07:00] Running scheduled command: App\Jobs\ImportMT940Job
+[2024-05-27T11:08:36+07:00] Running scheduled command: App\Jobs\ImportMT940Job
+[2024-05-27T11:09:50+07:00] Running scheduled command: App\Jobs\ImportMT940Job
+
+In Kernel.php line 36:
+                                              
+  Unclosed '{' on line 32 does not match ')'  
+                                              
+
+[2024-05-27T11:50:55+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-05-27T11:50:55+07:00] Running scheduled command: App\Jobs\ImportMT940Job
+No scheduled commands are ready to run.
+[2024-05-27T13:47:48+07:00] Running scheduled command: App\Jobs\TestJob
+
+In Kernel.php line 31:
+                                                                                                                                                                                        
+  Could not check compatibility between App\Console\Kernel::schedule(Illuminate\Support\Facades\Schedule $schedule) and Laravel\Lumen\Console\Kernel::schedule(Illuminate\Console\Sche  
+  duling\Schedule $schedule), because class Illuminate\Support\Facades\Schedule is not available                                                                                        
+                                                                                                                                                                                        
+
+[2024-05-27T13:51:20+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-05-27T13:56:20+07:00] Running scheduled command: App\Jobs\TestJob
+No scheduled commands are ready to run.
+[2024-05-27T14:09:35+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-05-27T14:11:43+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-05-27T14:12:04+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-05-27T14:23:40+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-05-27T14:24:29+07:00] Running scheduled command: App\Jobs\TestJob

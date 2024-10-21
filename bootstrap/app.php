@@ -70,10 +70,12 @@ $app->singleton('filesystem', function ($app) {
 */
 
 $app->configure('app');
+$app->configure('cors');
 $app->configure('filesystems');
 $app->configure('tinker');
 $app->configure('database');
 $app->configure('queue');
+$app->configure('logging');
 
 /*
 |--------------------------------------------------------------------------
@@ -88,7 +90,8 @@ $app->configure('queue');
 
 $app->middleware([
   //  App\Http\Middleware\ExampleMiddleware::class
- App\Http\Middleware\CorsMiddleware::class
+  //App\Http\Middleware\CorsMiddleware::class
+  Fruitcake\Cors\HandleCors::class
 ]);
 
 // $app->routeMiddleware([
@@ -111,6 +114,7 @@ $app->register(App\Providers\AppServiceProvider::class);
 // $app->register(App\Providers\EventServiceProvider::class);
 $app->register(Fruitcake\Cors\CorsServiceProvider::class);
 $app->register(Laravel\Tinker\TinkerServiceProvider::class);
+$app->register(Flipbox\LumenGenerator\LumenGeneratorServiceProvider::class);
 
 /*
 |--------------------------------------------------------------------------

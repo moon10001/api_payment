@@ -1,0 +1,10 @@
+[2024-04-18T23:10:28+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-04-18T23:17:18+07:00] Running scheduled command: App\Jobs\TestJob
+
+In TestJob.php line 16:
+                                                                                                                 
+  Cannot use Symfony\Component\Console\Output\ConsoleOutput as ConsoleOutput because the name is already in use  
+                                                                                                                 
+
+[2024-04-18T23:19:51+07:00] Running scheduled command: App\Jobs\TestJob
+[2024-04-18T23:20:31+07:00] Running scheduled command: App\Jobs\TestJob

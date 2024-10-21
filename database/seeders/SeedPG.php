@@ -6,11 +6,10 @@ use DateTime;
 use DatePeriod;
 use DateInterval;
 use Illuminate\Database\Seeder;
-use App\Jobs\ReconcilePaymentJob;
-use App\Jobs\UpdateTransactionsTableJob;
-use App\Jobs\Mt940ForcedOKJob;
+use App\Jobs\ImportFaspayJob;
+use App\Jobs\ExportPGToJournalsJob;
 
-class SeedH2H extends Seeder
+class SeedPG extends Seeder
 {
     /**
      * Run the database seeds.
@@ -19,15 +18,17 @@ class SeedH2H extends Seeder
      */
     public function run()
     {
-        $begin = new DateTime('2024-05-24');
+        $begin = new DateTime('2024-04-01');
         $end = new DateTime('2024-06-04');
 
         $interval = DateInterval::createFromDateString('1 day');
         $period = new DatePeriod($begin, $interval, $end);
+		
+//		$updateStatementDateJob = new ImportFaspayJob();
+//		$updateStatementDateJob->handle();
+
         foreach ($period as $dt) {
-//	      $job = new ReconcilePaymentJob($dt->format('Y-m-d'));
-//	      $job->handle();
-          $job = new UpdateTransactionsTableJob('','','',$dt->format('Y-m-d'));
+          $job = new ExportPGToJournalsJob($dt->format('Y-m-d'));
           $job->handle();
         }
     }
