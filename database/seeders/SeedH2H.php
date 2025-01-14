@@ -19,8 +19,8 @@ class SeedH2H extends Seeder
      */
     public function run()
     {
-        $begin = new DateTime('2024-05-24');
-        $end = new DateTime('2024-06-04');
+        $begin = new DateTime('2024-08-01');
+        $end = new DateTime('2024-08-02');
 
         $interval = DateInterval::createFromDateString('1 day');
         $period = new DatePeriod($begin, $interval, $end);
