@@ -171,7 +171,17 @@ class ReportController extends Controller
           tr_invoices.*,
           mt940.payment_date,
           tr_faspay.settlement_date,
-          @temp_date := COALESCE(mt940.payment_date, tr_faspay.settlement_date) as payments_date,
+          @temp_date := COALESCE(
+          	mt940.payment_date,
+          	tr_faspay.settlement_date,
+          	CASE
+          		WHEN
+          			tr_invoices.mt940_id IS NULL
+          			AND
+          			tr_invoices.faspay_id IS NULL
+          		THEN tr_invoices.payments_date
+          	END
+          ) as payments_date,
           DATE_FORMAT(@temp_date, "%d-%m-%y") as payment_date_formatted,
           DATE_FORMAT(@temp_date, "%m") as payment_month,
           YEAR(@temp_date) as payment_year,
