@@ -197,6 +197,7 @@ class ReportController extends Controller
         WHERE 
         tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
         AND tr_invoices.id like "INV-%"
+        AND (tr_invoices.faspay_id is not null OR tr_invoices.mt940_id is not null)
       '));
 
       $outstanding = DB::table('tr_invoices')

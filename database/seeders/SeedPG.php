@@ -18,8 +18,8 @@ class SeedPG extends Seeder
      */
     public function run()
     {
-        $begin = new DateTime('2024-11-11');
-        $end = new DateTime('2024-11-12');
+		$begin = new DateTime('2025-08-01');
+        $end = new DateTime('2025-08-02');
 
         $interval = DateInterval::createFromDateString('1 day');
         $period = new DatePeriod($begin, $interval, $end);

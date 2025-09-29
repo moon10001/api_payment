@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
 use App\Jobs\ExportPGToJournalsJob;
+use Illuminate\Support\Facades\Log;
 
 class ImportFaspayJob extends Job
 {
@@ -58,7 +59,7 @@ class ImportFaspayJob extends Job
     	->where('status', 'PROCESSED')
     	->get();
       	echo('Imported: ' .$res->count()."\n");
-      	app('log')->channel('slack')->info('Successfully imported '.$filename);        
+      	app('log')->channel('slack')->info($filename.' import count: '.$res->count());        
     	return $res->count() >= 1;
     }
 
@@ -69,7 +70,7 @@ class ImportFaspayJob extends Job
         'filename' => $filename,
         'processed_at' => Carbon::now(),
         'status' => $status,
-        'error_log' => $message,
+        'error_log' => '',
         'updated_at' => Carbon::now(),
       ]);
     }
@@ -107,8 +108,9 @@ class ImportFaspayJob extends Job
           $data = [];
           echo storage_path('app/faspay/'.$filename ."\n");
           $spreadsheet = IOFactory::load(storage_path('app/faspay/'.$filename));
-          $worksheet = $spreadsheet->getActiveSheet();
-
+          $worksheet = $spreadsheet->getSheetByName('Detail');
+		  app('log')->channel('slack')->info('Number of rows in '. $worksheet->getTitle() .' : '. $worksheet->getHighestRow());
+		  
           foreach ($worksheet->getRowIterator() as $row) {
             $rowIndex = $row->getRowIndex();
             if ($rowIndex < 5) {
@@ -153,7 +155,8 @@ class ImportFaspayJob extends Job
         	dispatch(new ExportPGToJournalsJob);
         }
       } catch (Exception $e) {
-        error_log('Failed Reading'."\n" );
+      	app('log')->channel('slack')->error($e->getMessage());
+        error_log('Failed Reading'."\n".$e->getMessage() );
       }
       echo('==============================================='."\n");
       echo('Files processed: '. $fileCount."\n");
