@@ -179,7 +179,7 @@ class ReportController extends Controller
           			tr_invoices.mt940_id IS NULL
           			AND
           			tr_invoices.faspay_id IS NULL
-          		THEN tr_invoices.payments_date
+          		THEN tr_invoice_details.payments_date
           	END
           ) as payments_date,
           DATE_FORMAT(@temp_date, "%d-%m-%y") as payment_date_formatted,
@@ -194,10 +194,15 @@ class ReportController extends Controller
         LEFT JOIN tr_faspay
         ON
           tr_faspay.id = tr_invoices.faspay_id AND DATE(tr_faspay.settlement_date) between "'. $startYear.'-07-01" and "'. $endYear.'-06-31"
+        LEFT JOIN tr_invoice_details
+        ON 
+          tr_invoice_details.invoices_id = tr_invoices.id
+          AND tr_invoices.faspay_id is null AND tr_invoices.mt940_id is null
+          AND DATE(tr_invoice_details.payments_date) between "'. $startYear .'-07-01" and "'. $endYear .'-06-31"
         WHERE 
         tr_invoices.temps_id IN ('. join(',', $students->pluck('no_va')->toArray()) .')
+        AND tr_invoices.payments_date is not null
         AND tr_invoices.id like "INV-%"
-        AND (tr_invoices.faspay_id is not null OR tr_invoices.mt940_id is not null)
       '));
 
       $outstanding = DB::table('tr_invoices')
