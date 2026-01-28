@@ -39,6 +39,7 @@ class ExportPGToJournalsJob extends Job
       'Uang Pendaftaran' => 42101,
       'DPP' => 41101,
       'UPP' => 41201,
+	  'SRG' => 21509,
     ];
     /**
      * Create a new job instance.

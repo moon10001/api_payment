@@ -254,7 +254,7 @@ class ImportMT940Job extends Job
                   $tempsId = substr($va, 0, 9);
                   $sum = 0;
 
-                  if (!str_starts_with($periode, 4)) {
+                  if (!str_starts_with($periode, 4) && !str_starts_with($periode, 2)) {
                     $fromMonth = substr($periode, 0, 2);
                     $toMonth = substr($periode, 4, 2);
                     $fromYear = substr($periode, 2, 2);
@@ -306,7 +306,9 @@ class ImportMT940Job extends Job
             }
           });
         }
+        app('log')->channel('slack')->info('File count: '.$fileCount);
         if ($fileCount > 0) {
+        	//app('log')->channel('slack')->info('Calling UpdateTransactionsTableJob');
         	dispatch(new UpdateTransactionsTableJob);
         }
       } catch (Exception $e) {
@@ -314,6 +316,7 @@ class ImportMT940Job extends Job
         
         app('log')->channel('slack')->error($e->message());        
       }
+      app('log')->channel('slack')->info("Successfully Imported MT940");
       //echo('==============================================='."\n");
       //echo('Files processed: '. $fileCount."\n");
       //echo('Rows processed : '. $rowCount."\n");

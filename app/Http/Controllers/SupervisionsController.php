@@ -40,9 +40,9 @@ class SupervisionsController extends Controller
 
 	  $outstanding = DB::table('tr_invoices')
       ->selectRaw('
-        YEAR(periode_date) as periode_year
+        YEAR(periode_date) as periode_year,
+        payments_date
       ')
-      ->join('tr_payment_details', 'tr_payment_details.invoices_id', 'tr_invoices.id')
       ->whereBetween('tr_invoices.periode_date', [($year-5).'-7-1', $year.'-6-30'])
       ->where('tr_payment_details.payments_id', $paymentId)
       ->where('tr_invoices.id', 'like', 'INV-'.$va.'%')
@@ -142,7 +142,8 @@ class SupervisionsController extends Controller
       foreach($outstanding as $o) {
         $year = $o->periode_year;
         $title = 'TA '.$year.'/'.($year+1);
-        $filtered = $outstandingDetails->where('periode_date', '>=', $year.'-07-01')->where('periode_date', '<=', ($year+1).'-06-30');
+        $filtered = $outstandingDetails->where('periode_date', '>=', $year.'-07-01')->where('periode_date', '<=', ($year+1).'-06-30')
+        ->where('payments_date', '>', ($year+1).'06-30');
         $totalInvoice = $filtered->sum('total_nominal');
         $totalPayment = $filtered->whereNotNull('payments_date')->sum('total_nominal');	
         

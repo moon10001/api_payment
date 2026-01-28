@@ -38,6 +38,7 @@ class UpdateTransactionsTableJob extends Job
       'Uang Pendaftaran' => 42101,
       'DPP' => 41101,
       'UPP' => 41201,
+      'SRG' => 21509,
     ];
     
     public $timeout = 900;
@@ -104,7 +105,7 @@ class UpdateTransactionsTableJob extends Job
     }
 
     private function logJournal($data) {
-        app('log')->channel('slack')->info('Exporting H2H to journals ---'. $this->date);    
+        app('log')->channel('slack')->info('Exporting H2H to journals ---'. $this->date .' --- '. $data['journal_number']);    
         DB::connection('finance_db')->table('journal_logs')->insert([
           'journals_id' => 0,
           'journal_number' => $data['journal_number'],
@@ -138,6 +139,7 @@ class UpdateTransactionsTableJob extends Job
 
       foreach($mt940 as $data) {
         $timestamp = Carbon::now();
+        //app('log')->channel('slack')->info('Processing MT940 Row to Reconciliation');
 
         $journalNumber = $this->generateJournalNumber($this->date, 95);
         $this->logJournal([
@@ -272,8 +274,8 @@ class UpdateTransactionsTableJob extends Job
       	->select('id', 'nominal', 'va')
       	->where('payment_date', $this->date)
       	->get(); 
-      	//echo("BEGIN ==== ".$this->date."\n");
-				$ids = $mt940->pluck('id');
+
+		$ids = $mt940->pluck('id');
 		
         $trInvoices = DB::table('tr_invoices')
         ->select(DB::raw('SUM(nominal) as total_inv, mt940_id'))
@@ -281,26 +283,19 @@ class UpdateTransactionsTableJob extends Job
         ->groupBy('mt940_id')
         ->get();
 		
-		    $total = 0;
-		      	
+	    $total = 0;
+
       	foreach($mt940 as $row) {
       		$nominal = $row->nominal;
-      		$filtered = $trInvoices->where('mt940_id', $row->id)->first();     		
+      		$filtered = $trInvoices->where('mt940_id', $row->id)->first();
       		if (!is_null($filtered)) {
       			$diff = floatval($nominal) - floatval($filtered->total_inv);
       			if ($diff > 0) {
       				$total += $diff;
-				  	  //echo($row->id."\n");
-              //echo($row->nominal."\n");
-              //echo($filtered->total_inv."\n");
-              //echo($total."\n\n");
-            }      			
+	            }
       		} else {
             $diff = floatval($nominal);
             $total += $diff;
-            //echo ($row->id."\n");
-            //echo ($row->nominal."\n");
-            //echo ($total."\n\n");
           }
       	}
         if ($total > 0) {
